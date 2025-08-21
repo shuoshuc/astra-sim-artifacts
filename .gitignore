@@ -1,0 +1,84 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+*.whl
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.sublime-workspace
+*.swp
+
+# Other common files
+.env
+.DS_Store
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+
+# Executables (if not intended for version control)
+*.sh.exe
+a.out
+
+# IDE and editor files
+.vscode/
+*.swp
+
+# Build artifacts
+*.o
+*.obj
+*.ko
+*.lo
+*.la
+*.ln
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.exe
+*.out
+*.app
+*.pdb
+*.ilk
+*.exp
+*.lib
+
+# IDE and editor files
+.vscode/
+.idea/
+*.xcodeproj/
+*.vcproj/
+*.sln
+*.suo
+*.user
+*.ncb
+*.aps
+*.bsc
+*.sbr
+*.tlog
+ipch/
+*.opensdf
+*.sdf
+*.cache
+*.build
+*.log
