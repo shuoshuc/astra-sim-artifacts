@@ -18,3 +18,11 @@ Inside the container, go to the example folder and run the script:
 cd examples/torus1D-ns3
 ./run.sh
 ```
+
+# Tools
+The tools/ folder contains useful tools to help with the experiments.
+
+For example, build\_torus.py can construct a physical torus network given specified parameters.
+```bash
+python3 tools/build_torus.py --dims 4 4 -b 400Gbps -l 0.001ms -o physical_16nodes_2D.txt
+```
