@@ -88,6 +88,7 @@ RUN git config --global --add safe.directory /app/param
 WORKDIR /app/param/et_replay
 RUN git checkout 7b19f586dd8b267333114992833a0d7e0d601630
 RUN pip3 install .
+RUN pip3 install --upgrade protobuf
 ### ======================================================
 
 
