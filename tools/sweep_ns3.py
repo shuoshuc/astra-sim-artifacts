@@ -142,7 +142,7 @@ def sweep():
     header = [
         "ring size",
         "N contending links",
-        "M conetnding jobs",
+        "M contending jobs",
         "collective size",
         "cycles",
     ]
