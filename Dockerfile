@@ -41,7 +41,7 @@ ENV absl_DIR="/opt/abseil-cpp-${ABSL_VERSION}/install"
 
 
 ### ============= Protobuf Installation ==================
-ARG PROTOBUF_VERSION=28.3
+ARG PROTOBUF_VERSION=29.0
 WORKDIR /opt
 RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VERSION}/protobuf-${PROTOBUF_VERSION}.tar.gz
 RUN tar -xf protobuf-${PROTOBUF_VERSION}.tar.gz
@@ -74,14 +74,13 @@ RUN git submodule update --init --recursive
 WORKDIR /app
 RUN ln -s astra-sim/extern/graph_frontend/chakra .
 RUN git clone https://github.com/meta-pytorch/chakra_replay.git
-RUN git clone https://github.com/astra-sim/symbolic_tensor_graph
 ### ======================================================
 
 
 ### ============= Chakra Installation ==================
 WORKDIR /app/chakra
 RUN pip3 install .
-RUN git config --global --add safe.directory /app/param
+RUN git config --global --add safe.directory /app/chakra_replay
 WORKDIR /app/chakra_replay
 RUN pip3 install -r requirements.txt
 RUN pip3 install .
@@ -93,6 +92,11 @@ RUN pip3 install --upgrade protobuf
 WORKDIR /app/astra-sim
 RUN bash ./build/astra_analytical/build.sh
 RUN bash ./build/astra_ns3/build.sh
+### ======================================================
+
+
+### ============= STG Installation ==================
+RUN git clone https://github.com/astra-sim/symbolic_tensor_graph
 ### ======================================================
 
 
