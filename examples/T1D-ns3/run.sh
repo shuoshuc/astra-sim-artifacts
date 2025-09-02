@@ -15,7 +15,7 @@ cd ${ASTRA_SIM_BUILD_DIR}
 touch ../../scratch/output/flow.txt
 ${ASTRA_SIM} \
     --workload-configuration=${SCRIPT_DIR}/trace/trace \
-    --system-configuration=${SCRIPT_DIR}/inputs/Ring_Ring_sys.json \
+    --system-configuration=${SCRIPT_DIR}/inputs/sys.json \
     --remote-memory-configuration=${SCRIPT_DIR}/inputs/RemoteMemory.json \
     --logical-topology-configuration=${SCRIPT_DIR}/inputs/logical_network.json \
     --network-configuration=${SCRIPT_DIR}/inputs/ns3_config.txt \
