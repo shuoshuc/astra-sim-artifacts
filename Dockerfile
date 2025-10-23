@@ -71,6 +71,14 @@ WORKDIR /app
 RUN git clone https://github.com/EricDinging/astra-sim-hybrid-parallelism.git astra-sim
 WORKDIR /app/astra-sim
 RUN git submodule update --init --recursive
+
+# use max's fork of astra-sim analytical backend
+WORKDIR /app/astra-sim/extern/network_backend/analytical
+RUN git remote set-url origin https://github.com/mhtang613/astra-network-analytical.git
+RUN git fetch origin
+RUN git checkout multitenancy
+RUN git pull origin multitenancy
+
 WORKDIR /app
 RUN ln -s astra-sim/extern/graph_frontend/chakra .
 RUN git clone https://github.com/meta-pytorch/chakra_replay.git
@@ -97,6 +105,7 @@ RUN bash ./build/astra_ns3/build.sh
 
 ### ============= STG Installation ==================
 RUN git clone https://github.com/astra-sim/symbolic_tensor_graph
+RUN pip3 install tqdm
 ### ======================================================
 
 
