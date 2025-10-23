@@ -70,14 +70,14 @@ ENV PROTOBUF_FROM_SOURCE="True"
 WORKDIR /app
 RUN git clone https://github.com/EricDinging/astra-sim-hybrid-parallelism.git astra-sim
 WORKDIR /app/astra-sim
-RUN git submodule update --init --recursive
 
 # use max's fork of astra-sim analytical backend
-WORKDIR /app/astra-sim/extern/network_backend/analytical
-RUN git remote set-url origin https://github.com/mhtang613/astra-network-analytical.git
-RUN git fetch origin
-RUN git checkout multitenancy
-RUN git pull origin multitenancy
+RUN git submodule update --init --recursive
+RUN rm -rf extern/network_backend/analytical
+RUN git clone --recurse-submodules -b multitenancy https://github.com/mhtang613/astra-network-analytical.git extern/network_backend/analytical
+
+
+
 
 WORKDIR /app
 RUN ln -s astra-sim/extern/graph_frontend/chakra .
