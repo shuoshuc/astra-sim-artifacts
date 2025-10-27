@@ -15,7 +15,7 @@ docker run -it -v $(pwd)/examples:/app/examples astra
 
 Inside the container, go to the example folder and run the script:
 ```bash
-cd examples/torus1D-ns3
+cd examples/T1D-ns3
 ./run.sh
 ```
 
@@ -25,4 +25,10 @@ The tools/ folder contains useful tools to help with the experiments.
 For example, build\_torus.py can construct a physical torus network given specified parameters.
 ```bash
 python3 tools/build_torus.py --dims 4 4 -b 400Gbps -l 0.001ms -o physical_16nodes_2D.txt
+```
+
+## Merge traces
+To merge multiple traces in a multi-tenant experiment, use merge\_trace.py.
+```bash
+python merge_trace.py -i /app/examples/multitenant-T1D-analytical/trace/ --traces J1,J0 -o ./tmp/ -p /app/examples/multitenant-T1D-analytical/placement.json
 ```
