@@ -70,6 +70,7 @@ ENV PROTOBUF_FROM_SOURCE="True"
 WORKDIR /app
 RUN git clone https://github.com/EricDinging/astra-sim-hybrid-parallelism.git astra-sim
 WORKDIR /app/astra-sim
+RUN git checkout multitenant
 RUN git submodule update --init --recursive
 WORKDIR /app
 RUN ln -s astra-sim/extern/graph_frontend/chakra .
