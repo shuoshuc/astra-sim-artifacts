@@ -1,5 +1,4 @@
 import os
-import sys
 import argparse
 import json
 
@@ -14,6 +13,21 @@ from chakra.schema.protobuf.et_def_pb2 import (
     ALL_REDUCE,
     ALL_GATHER,
 )
+
+
+class MonotonicCounter:
+    """
+    Non-thread-safe monotonically increasing integer counter.
+    Call fetch() to get the current value and increment it.
+    """
+
+    def __init__(self, start: int = 0):
+        self._counter = start
+
+    def fetch(self) -> int:
+        v = self._counter
+        self._counter += 1
+        return v
 
 
 def parse_placement(placement_file):
@@ -33,21 +47,39 @@ def parse_placement(placement_file):
         return json.load(f)
 
 
-def translate_chakra_pb(orig_trace, out_trace):
+def parse_comm_group(comm_group_file):
+    """
+    Parses a JSON communication group file into a dictionary.
+    """
+    with open(comm_group_file, "r") as f:
+        return json.load(f)
+
+
+def translate_chakra_pb(orig_trace, out_trace, comm_group_map):
     """
     Translates Chakra protobuf trace to the trace in the merged job.
     This function ensures the pg_name IDs are correctly mapped.
     Args:
         orig_trace (str): The original trace file path.
         out_trace (str): The output trace file path.
+        comm_group_map (Dict[str, str]): Mapping from local comm group IDs to global comm group IDs.
     """
     global_metadata = GlobalMetadata()
     node = ChakraNode()
     with open(orig_trace, "rb") as orig_et, open(out_trace, "wb") as out_et:
         decodeMessage(orig_et, global_metadata)
         encodeMessage(out_et, global_metadata)
-        # TODO: implement proper pg_name translation.
         while decodeMessage(orig_et, node):
+            if node.type == COMM_COLL_NODE:
+                for attr in node.attr:
+                    if attr.name != "pg_name":
+                        continue
+                    pg_name_str = attr.string_val
+                    if pg_name_str not in comm_group_map:
+                        raise ValueError(
+                            f"pg_name {pg_name_str} not found in comm_group_map, trace: {orig_trace}"
+                        )
+                    attr.string_val = comm_group_map[pg_name_str]
             encodeMessage(out_et, node)
 
 
@@ -62,11 +94,29 @@ def merge_traces(input_path, traces, output_path, placement_map):
     """
     print(f"Merging traces from {input_path} into {output_path}")
     print(f"Traces to merge: {traces}")
+    # A monotonically increasing index for global communication group IDs
+    cg_index = MonotonicCounter(0)
+    # Mapping job-local XPU IDs in communication groups (pg_name) -> global XPU IDs
+    global_comm_group_map = {}
     for trace in traces:
         trace_path = os.path.join(input_path, trace)
         if not os.path.exists(trace_path):
             raise FileNotFoundError(f"Trace path does not exist: {trace_path}")
 
+        # Parse trace-specific comm_group.json
+        comm_group_path = os.path.join(trace_path, "comm_group.json")
+        if not os.path.isfile(comm_group_path):
+            raise FileNotFoundError(f"comm_group.json not found in {trace_path}")
+        # Throwaway trace-specific communication group ID map for trace translation.
+        trace_cg_map = {}
+        for local_cg_id, xpu_list in parse_comm_group(comm_group_path).items():
+            global_cg_id = str(cg_index.fetch())
+            trace_cg_map[local_cg_id] = global_cg_id
+            global_comm_group_map[global_cg_id] = [
+                placement_map[f"{trace}-{int(local_xpu_id)}"] for local_xpu_id in xpu_list
+            ]
+
+        # Iterate over all .et files in the trace directory and translate them.
         for name in sorted(os.listdir(trace_path)):
             if not name.endswith(".et"):
                 continue
@@ -75,7 +125,13 @@ def merge_traces(input_path, traces, output_path, placement_map):
             translate_chakra_pb(
                 orig_trace=file_path,
                 out_trace=os.path.join(output_path, f"trace.{xpu_id}.et"),
+                comm_group_map=trace_cg_map,
             )
+
+    # Dump the merged communication group config.
+    merged_comm_group_path = os.path.join(output_path, "comm_group.json")
+    with open(merged_comm_group_path, "w") as f:
+        json.dump(global_comm_group_map, f, indent=2)
 
 
 if __name__ == "__main__":
