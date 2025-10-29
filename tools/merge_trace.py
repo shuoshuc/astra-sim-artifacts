@@ -55,14 +55,16 @@ def parse_comm_group(comm_group_file):
         return json.load(f)
 
 
-def translate_chakra_pb(orig_trace, out_trace, comm_group_map):
+def translate_chakra_pb(orig_trace, out_trace, trace_name, comm_group_map, placement_map):
     """
     Translates Chakra protobuf trace to the trace in the merged job.
     This function ensures the pg_name IDs are correctly mapped.
     Args:
         orig_trace (str): The original trace file path.
         out_trace (str): The output trace file path.
+        trace_name (str): The trace name.
         comm_group_map (Dict[str, str]): Mapping from local comm group IDs to global comm group IDs.
+        placement_map (Dict[str, int]): job and XPU IDs to physical XPU IDs mapping.
     """
     global_metadata = GlobalMetadata()
     node = ChakraNode()
@@ -80,6 +82,29 @@ def translate_chakra_pb(orig_trace, out_trace, comm_group_map):
                             f"pg_name {pg_name_str} not found in comm_group_map, trace: {orig_trace}"
                         )
                     attr.string_val = comm_group_map[pg_name_str]
+
+            elif node.type == COMM_RECV_NODE:
+                for attr in node.attr:
+                    if attr.name != "comm_src":
+                        continue
+                    local_xpu_id = attr.int32_val
+                    key = f"{trace_name}-{local_xpu_id}"
+                    if key not in placement_map:
+                        raise ValueError(
+                            f"{attr.name} refers to {key}, but it's not found in placement_map, trace: {orig_trace}"
+                        )
+                    attr.int32_val = placement_map[key]
+            elif node.type == COMM_SEND_NODE:
+                for attr in node.attr:
+                    if attr.name != "comm_dst":
+                        continue
+                    local_xpu_id = attr.int32_val
+                    key = f"{trace_name}-{local_xpu_id}"
+                    if key not in placement_map:
+                        raise ValueError(
+                            f"{attr.name} refers to {key}, but it's not found in placement_map, trace: {orig_trace}"
+                        )
+                    attr.int32_val = placement_map[key]
             encodeMessage(out_et, node)
 
 
@@ -125,7 +150,9 @@ def merge_traces(input_path, traces, output_path, placement_map):
             translate_chakra_pb(
                 orig_trace=file_path,
                 out_trace=os.path.join(output_path, f"trace.{xpu_id}.et"),
+                trace_name=name,
                 comm_group_map=trace_cg_map,
+                placement_map=placement_map,
             )
 
     # Dump the merged communication group config.
