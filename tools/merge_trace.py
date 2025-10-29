@@ -1,5 +1,4 @@
 import os
-import sys
 import argparse
 import json
 
@@ -14,6 +13,21 @@ from chakra.schema.protobuf.et_def_pb2 import (
     ALL_REDUCE,
     ALL_GATHER,
 )
+
+
+class MonotonicCounter:
+    """
+    Non-thread-safe monotonically increasing integer counter.
+    Call fetch() to get the current value and increment it.
+    """
+
+    def __init__(self, start: int = 0):
+        self._counter = start
+
+    def fetch(self) -> int:
+        v = self._counter
+        self._counter += 1
+        return v
 
 
 def parse_placement(placement_file):
@@ -32,80 +46,25 @@ def parse_placement(placement_file):
     with open(placement_file, "r") as f:
         return json.load(f)
 
-def build_job_xpu_map(jobs, placement_map):
+
+def parse_comm_group(comm_group_file):
     """
-    Builds a dictionary mapping each job to its own map of old XPU IDs
-    to new XPU IDs.
-
-    Args:
-        jobs (List[str]): List of job names (e.g., ["J0", "J1"]).
-        placement_map (Dict[str, int]): Mapping like {"J0-0": 0, "J0-1": 1, "J1-0": 2, ...}
-
-    Returns:
-        Dict[str, Dict[int, int]]: Mapping from job name → map of{old_xpu_id: new_xpu_id}
+    Parses a JSON communication group file into a dictionary.
     """
-    job_xpu_map = {}
-    for job in jobs:
-        xpu_map = {}
-        for key, global_xpu in placement_map.items():
-            if key.startswith(f"{job}-"):
-                local_xpu = int(key.split("-")[1])
-                xpu_map[local_xpu] = global_xpu
-        job_xpu_map[job] = xpu_map
-    return job_xpu_map
+    with open(comm_group_file, "r") as f:
+        return json.load(f)
 
 
-def merge_comm_groups(input_path, jobs, output_path, placement_map):
-    """
-    Merges each workload's comm group file into 1 based on placement_map
-    Args:
-        input_path (str): The folder containing the individual jobs.
-        jobs (List[str]): List of job names to merge.
-        output_path (str): The folder to the merged job.
-        placement_map (Dict[str, int]): job and XPU IDs to physical XPU IDs mapping.
-    Returns:
-        Dict[str, int]: Mapping of job name to comm_group offset used for pg_name remapping
-    """
-    merged_groups = {}
-    offset = 0
-    offset_map = {}
-
-    for job in jobs:
-        comm_file = os.path.join(input_path, job, f"{job}.json")
-        if not os.path.exists(comm_file):
-            print(f"Warning: {comm_file} not found, skipping.")
-            continue
-
-        with open(comm_file, "r") as f:
-            groups = json.load(f)
-        
-        offset_map[job] = offset
-
-        for gid_str, members in groups.items():
-            gid = int(gid_str)
-            new_gid = gid + offset
-            new_members = [placement_map[f"{job}-{m}"] for m in members]
-            merged_groups[str(new_gid)] = new_members
-
-        offset += len(groups)
-
-    out_path = os.path.join(output_path, "comm_group.json")
-    with open(out_path, "w") as f:
-        json.dump(merged_groups, f, indent=4)
-    print(f"Merged comm groups written to {out_path}")
-
-    return offset_map
-
-
-def translate_chakra_pb(orig_trace, out_trace, comm_group_offset, xpu_map):
+def translate_chakra_pb(orig_trace, out_trace, trace_name, comm_group_map, placement_map):
     """
     Translates Chakra protobuf trace to the trace in the merged job.
     This function ensures the pg_name IDs are correctly mapped.
     Args:
         orig_trace (str): The original trace file path.
         out_trace (str): The output trace file path.
-        comm_group_offset (int): The comm_group offset for this trace's job
-        xpu_map (Dict[int, int]): original XPU id to new XPU id mapping for this trace's job
+        trace_name (str): The trace name.
+        comm_group_map (Dict[str, str]): Mapping from local comm group IDs to global comm group IDs.
+        placement_map (Dict[str, int]): job and XPU IDs to physical XPU IDs mapping.
     """
     global_metadata = GlobalMetadata()
     node = ChakraNode()
@@ -113,87 +72,116 @@ def translate_chakra_pb(orig_trace, out_trace, comm_group_offset, xpu_map):
         decodeMessage(orig_et, global_metadata)
         encodeMessage(out_et, global_metadata)
         while decodeMessage(orig_et, node):
-            for attr in node.attr:
-                # Update pg_name <= pg_name + comm_group_offset
-                if attr.name == "pg_name":
-                    try:
-                        original_pg = int(attr.string_val)
-                        attr.string_val = str(original_pg + comm_group_offset)
-                        # print(f"{orig_trace}: {attr.name} string = {original_pg} -> {attr.string_val}")
-                    except ValueError:
-                        print(f"Warning: pg_name field not integer-like in {src}: '{attr.string_val}'")
-                
-                # Update comm_src/comm_dst <= new node from placement_map
-                if attr.name in ("comm_src", "comm_dst"):
-                    if hasattr(attr, "int32Val") and attr.int32Val is not None:
-                        original_id = attr.int32Val
-                        attr.int32Val = xpu_map[original_id]
-                        # print(f"{orig_trace}: {attr.name} (int32Val) = {original_id} -> {attr.int32Val}")
-                    elif hasattr(attr, "int64Val") and attr.int64Val is not None:
-                        original_id = attr.int64Val
-                        attr.int64Val = xpu_map[original_id]
-                        # print(f"{orig_trace}: {attr.name} (int64Val) = {original_id} -> {attr.int64Val}")
-                    else:
-                        print(f"Warning: {attr.name} has no int32Val/int64Val in {src}")
+            if node.type == COMM_COLL_NODE:
+                for attr in node.attr:
+                    if attr.name != "pg_name":
+                        continue
+                    pg_name_str = attr.string_val
+                    if pg_name_str not in comm_group_map:
+                        raise ValueError(
+                            f"pg_name {pg_name_str} not found in comm_group_map, trace: {orig_trace}"
+                        )
+                    attr.string_val = comm_group_map[pg_name_str]
 
+            elif node.type == COMM_RECV_NODE:
+                for attr in node.attr:
+                    if attr.name != "comm_src":
+                        continue
+                    local_xpu_id = attr.int32_val
+                    key = f"{trace_name}-{local_xpu_id}"
+                    if key not in placement_map:
+                        raise ValueError(
+                            f"{attr.name} refers to {key}, but it's not found in placement_map, trace: {orig_trace}"
+                        )
+                    attr.int32_val = placement_map[key]
+            elif node.type == COMM_SEND_NODE:
+                for attr in node.attr:
+                    if attr.name != "comm_dst":
+                        continue
+                    local_xpu_id = attr.int32_val
+                    key = f"{trace_name}-{local_xpu_id}"
+                    if key not in placement_map:
+                        raise ValueError(
+                            f"{attr.name} refers to {key}, but it's not found in placement_map, trace: {orig_trace}"
+                        )
+                    attr.int32_val = placement_map[key]
             encodeMessage(out_et, node)
 
 
-def merge_jobs(input_path, jobs, output_path, placement_map, offset_map):
+def merge_traces(input_path, traces, output_path, placement_map):
     """
-    Merges multiple Chakra jobs into a single job based on the provided placement map.
+    Merges multiple Chakra traces into a single trace based on the provided placement map.
     Args:
-        input_path (str): The folder containing the individual jobs.
-        jobs (List[str]): List of job names to merge.
-        output_path (str): The folder to the merged job.
+        input_path (str): The folder containing the individual traces.
+        traces (List[str]): List of trace names to merge.
+        output_path (str): The folder to the merged trace.
         placement_map (Dict[str, int]): job and XPU IDs to physical XPU IDs mapping.
-        offset_map (Dict[str, int]): job name to number of comm_groups mapping
     """
-    print(f"Merging jobs from {input_path} into {output_path}")
-    print(f"Jobs to merge: {jobs}")
+    print(f"Merging traces from {input_path} into {output_path}")
+    print(f"Traces to merge: {traces}")
+    # A monotonically increasing index for global communication group IDs
+    cg_index = MonotonicCounter(0)
+    # Mapping job-local XPU IDs in communication groups (pg_name) -> global XPU IDs
+    global_comm_group_map = {}
+    for trace in traces:
+        trace_path = os.path.join(input_path, trace)
+        if not os.path.exists(trace_path):
+            raise FileNotFoundError(f"Trace path does not exist: {trace_path}")
 
-    jobs_xpu_map = build_job_xpu_map(jobs, placement_map)
-    for job in jobs:
-        job_path = os.path.join(input_path, job)
-        if not os.path.exists(job_path):
-            raise FileNotFoundError(f"job path does not exist: {job_path}")
+        # Parse trace-specific comm_group.json
+        comm_group_path = os.path.join(trace_path, "comm_group.json")
+        if not os.path.isfile(comm_group_path):
+            raise FileNotFoundError(f"comm_group.json not found in {trace_path}")
+        # Throwaway trace-specific communication group ID map for trace translation.
+        trace_cg_map = {}
+        for local_cg_id, xpu_list in parse_comm_group(comm_group_path).items():
+            global_cg_id = str(cg_index.fetch())
+            trace_cg_map[local_cg_id] = global_cg_id
+            global_comm_group_map[global_cg_id] = [
+                placement_map[f"{trace}-{int(local_xpu_id)}"] for local_xpu_id in xpu_list
+            ]
 
-        for name in sorted(os.listdir(job_path)):
+        # Iterate over all .et files in the trace directory and translate them.
+        for name in sorted(os.listdir(trace_path)):
             if not name.endswith(".et"):
                 continue
-            trace_path = os.path.join(job_path, name)
-            xpu_id = placement_map[f"{job}-{name.split('.')[-2]}"]
+            file_path = os.path.join(trace_path, name)
+            xpu_id = placement_map[f"{trace}-{name.split('.')[-2]}"]
             translate_chakra_pb(
-                orig_trace=trace_path,
+                orig_trace=file_path,
                 out_trace=os.path.join(output_path, f"trace.{xpu_id}.et"),
-                comm_group_offset=offset_map[job],
-                xpu_map=jobs_xpu_map[job]
+                trace_name=name,
+                comm_group_map=trace_cg_map,
+                placement_map=placement_map,
             )
+
+    # Dump the merged communication group config.
+    merged_comm_group_path = os.path.join(output_path, "comm_group.json")
+    with open(merged_comm_group_path, "w") as f:
+        json.dump(global_comm_group_map, f, indent=2)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Merge multiple Chakra jobs.")
+    parser = argparse.ArgumentParser(description="Merge multiple Chakra traces.")
     parser.add_argument(
-        "-i", "--input", help="Path to folder that contains all the jobs."
+        "-i", "--input", help="Path to folder that contains all the traces."
     )
     parser.add_argument(
-        "--jobs",
-        help="Comma-separated list of job names.",
+        "--traces",
+        help="Comma-separated list of trace paths.",
         type=lambda s: [p.strip() for p in s.split(",") if p.strip()],
         default=None,
     )
-    parser.add_argument("-o", "--output", help="Path to the merged job.")
+    parser.add_argument("-o", "--output", help="Path to the merged trace.")
     parser.add_argument("-p", "--placement", help="Placement config file.")
     args = parser.parse_args()
 
-    # Extract input/output paths and jobs.
+    # Extract input/output paths and traces.
     input_path = args.input
-    jobs = sorted(args.jobs)
+    traces = sorted(args.traces)
     output_path = args.output
 
     # Parse the json config for job placement.
     placement_map = parse_placement(args.placement)
 
-    offset_map = merge_comm_groups(input_path, jobs, output_path, placement_map)
-    merge_jobs(input_path, jobs, output_path, placement_map, offset_map)
-    
+    merge_traces(input_path, traces, output_path, placement_map)
