@@ -97,7 +97,9 @@ RUN bash ./build/astra_ns3/build.sh
 
 
 ### ============= STG Installation ==================
-RUN git clone https://github.com/astra-sim/symbolic_tensor_graph
+WORKDIR /app
+RUN pip3 install tqdm
+RUN git clone https://github.com/astra-sim/symbolic_tensor_graph STG
 ### ======================================================
 
 
