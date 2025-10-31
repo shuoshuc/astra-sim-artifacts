@@ -10,7 +10,7 @@ ASTRA_SIM=${BASE_DIR}/astra-sim/build/astra_analytical/build/bin/AstraSim_Analyt
 
 # Merge traces
 mkdir -p ${SCRIPT_DIR}/trace/merged
-python ${BASE_DIR}/tools/merge_trace.py -i ${SCRIPT_DIR}/trace/ --traces J1,J0 -o ${SCRIPT_DIR}/trace/merged/ -p ${SCRIPT_DIR}/placement2.json
+python ${BASE_DIR}/tools/merge_trace.py -i ${SCRIPT_DIR}/trace/ --traces J1,J0 -o ${SCRIPT_DIR}/trace/merged/ -p ${SCRIPT_DIR}/placement.json
 
 # Run ASTRA-sim
 (
