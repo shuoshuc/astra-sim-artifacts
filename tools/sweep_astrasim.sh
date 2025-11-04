@@ -19,20 +19,20 @@ if [[ "$1" == "-h" || "$1" == "--help" ]]; then
 Usage: $0 topology sys1d sys2d sys3d remote_mem.json [output_dir] [dp_values] [tp_values] [pp_values] [batch_size] [micro_batch_values] [models]
 
 Required arguments:
-  topology           Topology type ("tpu" or "hgx"). "tpu" uses TPUv4 network config, "hgx" uses HGX H100 network config
-  sys1d              Path to 1D system config that corresponds to the selected topology.
-  sys2d              Path to 2D system config that corresponds to the selected topology.
-  sys3d              Path to 3D system config that corresponds to the selected topology.
-  remote_mem.json    Path to remote memory config
+  topology           (STG input) Topology type ("tpu" or "hgx"). "tpu" uses TPUv4 network config, "hgx" uses HGX H100 network config
+  sys1d              (ASTRA-sim input) Path to 1D system config that corresponds to the selected topology.
+  sys2d              (ASTRA-sim input) Path to 2D system config that corresponds to the selected topology.
+  sys3d              (ASTRA-sim input) Path to 3D system config that corresponds to the selected topology.
+  remote_mem.json    (ASTRA-sim input) Path to remote memory config
 
-Optional arguments:
-  output_dir         Output directory (default: /app/examples/sweep_astrasim/)
-  dp_values          Comma-separated DP values (default: "1,2,4")
-  tp_values          Comma-separated TP values (default: "1,2,4")
-  pp_values          Comma-separated PP values (default: "1,2,4")
-  batch_size         Batch size for STG (default: 64)
-  micro_batch_values Comma-separated micro-batch sizes (default: "-1,16,32")
-  models             Comma-separated model list (default: "dense,gpt")
+Default arguments:
+  output_dir         (ASTRA-sim output) Output directory (default: /app/examples/sweep_astrasim/)
+  dp_values          (STG input) Comma-separated DP values (default: "1,2,4")
+  tp_values          (STG input) Comma-separated TP values (default: "1,2,4")
+  pp_values          (STG input) Comma-separated PP values (default: "1,2,4")
+  batch_size         (STG input) Batch size for STG (default: 64)
+  micro_batch_values (STG input) Comma-separated micro-batch sizes (default: "-1,16,32")
+  models             (STG input) Comma-separated model list (default: "dense,gpt")
 
 Examples:
   ./sweep_astrasim.sh tpu sys1d.json sys2d.json sys3d.json remote_mem.json
