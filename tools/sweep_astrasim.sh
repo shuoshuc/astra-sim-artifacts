@@ -152,8 +152,9 @@ for model in "${models[@]}"; do
 
           # If HGX H100, use Switch + Ring topology
           if [ "$topology" = "hgx" ]; then
-            # We ideally want the Switch to have 8 NPUs, and then lower level rings to have higher dim than higher level rings
-            # so that the highest dim gets to use the higher bandwidth, so we do the following:
+            # We want the Switch in HGX H100 to have no more than 8 NPUs, and then lower level rings to have 
+            # higher dim than higher level rings because of oversubscription, so we do the following:
+            
             # 1. sort the dimensions in descending order
             dims_arr=()
             [ $dp -gt 1 ] && dims_arr+=($dp)
@@ -163,7 +164,7 @@ for model in "${models[@]}"; do
             IFS=$'\n' sorted_dims=($(sort -nr <<<"${dims_arr[*]}"))
             unset IFS
 
-            # 2. if largest dim >8, insert greatest dim that is <=8 at the front
+            # 2. if largest dim >8, insert greatest dim that is <=8 at the front for the Switch
             if [ "${sorted_dims[0]}" -gt 8 ]; then
               found_insert=0
               for i in "${!sorted_dims[@]}"; do
@@ -242,7 +243,7 @@ EOF
           echo "[sweep] [$(date '+%m-%d %H:%M:%S')]    Using system config: $sys_cfg"
           ASTRASIM_OUT="$OUTPUT_DIR/statistics/out_${topology}_${model}_dp${dp}_tp${tp}_pp${pp}_ep${ep}_mb${micro_batch}.txt"
           mkdir -p "$(dirname "$ASTRASIM_OUT")"
-          echo "[sweep] [$(date '+%m-%d %H:%M:%S')]    ASTRA-sim statistics will be written to $ASTRASIM_OUT"
+          echo "[sweep] [$(date '+%m-%d %H:%M:%S')]    ASTRA-sim output will be written to $ASTRASIM_OUT"
           sim_start=$SECONDS
           (
             cd "$ASTRASIM_DIR" || exit
