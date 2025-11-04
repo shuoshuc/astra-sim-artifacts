@@ -109,7 +109,6 @@ for model in "${models[@]}"; do
           [[ $dp -gt 1 ]] && ((dims++))
           [[ $tp -gt 1 ]] && ((dims++))
           [[ $pp -gt 1 ]] && ((dims++))
-          [[ $ep -gt 1 ]] && ((dims++))
 
           case $dims in
               1) sys_cfg="$sys_cfg_1d" ;;
