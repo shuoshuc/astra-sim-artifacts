@@ -92,7 +92,7 @@ RUN pip3 install --upgrade protobuf
 ### ============= Astra-sim Installation ==================
 WORKDIR /app/astra-sim
 RUN bash ./build/astra_analytical/build.sh
-RUN bash ./build/astra_ns3/build.sh
+#RUN bash ./build/astra_ns3/build.sh
 ### ======================================================
 
 
