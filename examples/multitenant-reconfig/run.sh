@@ -8,6 +8,7 @@ SCRIPT_DIR=$(dirname "$(realpath $0)")
 BASE_DIR=${SCRIPT_DIR}/../../
 STG_DIR=${BASE_DIR}/STG
 ASTRA_SIM=${BASE_DIR}/astra-sim/build/astra_analytical/build/bin/AstraSim_Analytical_Reconfigurable
+BW_GEN=${BASE_DIR}/tools/gen_bw_matrix.py
 TRACE_PATH=${SCRIPT_DIR}/trace/merged/
 
 # TODO: Merge traces for multi-tenant scenarios.
@@ -16,6 +17,9 @@ cd ${STG_DIR}
 python3 ${STG_DIR}/main.py --output_dir ${TRACE_PATH} --output_name "trace" \
     --model_type "dense" --dp 2 --tp 2 --pp 1 \
     --weight_sharded 0 --chakra_schema_version "v0.0.4"
+
+# Generate BW matrix. Make sure bandwidth (bw) is consistent with the network config.
+python3 ${BW_GEN} -x 2 -y 2 -z 1 -bw 50 -o ${SCRIPT_DIR}/inputs/schedule.txt
 
 # Run ASTRA-sim
 (
