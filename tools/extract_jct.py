@@ -39,22 +39,20 @@ def extrac_jct(log_path, placement_map, output_path):
     with open(log_path, "r") as f:
         for line in f:
             match = pattern.search(line)
-            if match:
-                node_id = int(match.group(1))
-                jct = int(match.group(2))
+            if not match:
+                raise RuntimeError(f"No JCT found in line: {line}")
 
-                if node_id in placement_map:
-                    job_name = placement_map[node_id]
-                    print(f"node {node_id} (job {job_name}): {jct}")
-                    data.append({"Job": job_name, "JCT": jct})
+            node_id = int(match.group(1))
+            jct = int(match.group(2))
+            # TODO: Dummy nodes need special treatment.
+            if node_id not in placement_map:
+                raise RuntimeError(f"Node ID {node_id} not found in placement map.")
 
-    if not data:
-        print("No JCT data found matching placement map.")
-        return
+            data.append({"Job": placement_map[node_id], "JCT (nsec)": jct})
 
     df = pd.DataFrame(data)
     # Group by Job and take the max JCT
-    result = df.groupby("Job")["JCT"].max().reset_index()
+    result = df.groupby("Job")["JCT (nsec)"].max().reset_index()
     result.to_csv(output_path, index=False)
 
 
