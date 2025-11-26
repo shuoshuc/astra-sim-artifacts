@@ -16,11 +16,11 @@ INPUT_PATH=${SCRIPT_DIR}/inputs
 cd ${STG_DIR}
 mkdir -p ${TRACE_PATH}/J0
 python ${STG_DIR}/main.py --output_dir "${TRACE_PATH}/J0" --output_name "J0" \
-    --model_type "dense" --dp 4 --tp 2 --pp 4 \
+    --model_type "dense" --dp 4 --tp 4 --pp 2 \
     --weight_sharded 0 --chakra_schema_version "v0.0.4"
 mkdir -p ${TRACE_PATH}/J1
 python ${STG_DIR}/main.py --output_dir "${TRACE_PATH}/J1" --output_name "J1" \
-    --model_type "dense" --dp 4 --tp 2 --pp 4 \
+    --model_type "dense" --dp 4 --tp 4 --pp 2 \
     --weight_sharded 0 --chakra_schema_version "v0.0.4"
 
 # Merge traces for multi-tenant scenarios.
@@ -28,8 +28,15 @@ cd ${SCRIPT_DIR}
 mkdir -p ${TRACE_PATH}/merged
 python ${TOOLS_PATH}/merge_trace.py -i ${TRACE_PATH} --traces J0,J1 -o ${TRACE_PATH}/merged/ -p ${INPUT_PATH}/placement.json
 
-# Generate BW matrix. Make sure bandwidth (bw) is consistent with the network config.
-python ${TOOLS_PATH}/gen_bw_matrix.py -x 4 -y 4 -z 4 -bw 50 -o ${INPUT_PATH}/schedule.txt
+# Generate BW matrix for torus. Make sure bandwidth (bw) and npu count are consistent with the network config.
+XSIZE=4
+YSIZE=4
+ZSIZE=4
+BW=50
+NPUS=$((XSIZE * YSIZE * ZSIZE))
+python ${TOOLS_PATH}/gen_bw_matrix.py -x ${XSIZE} -y ${YSIZE} -z ${ZSIZE} -bw ${BW} -o ${INPUT_PATH}/schedule.txt
+sed -i "s/npus_count: \[ .* \]/npus_count: [ ${NPUS} ]/" ${INPUT_PATH}/network.yml
+sed -i "s/bandwidth: \[ .* \]/bandwidth: [ ${BW} ]/" ${INPUT_PATH}/network.yml
 
 # Run ASTRA-sim
 (
