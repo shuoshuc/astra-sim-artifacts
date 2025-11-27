@@ -17,7 +17,7 @@
     ],
     "collective-optimization": "localBWAware",
     "roofline-enabled": 1,
-    "local-mem-bw": 50,
+    "local-mem-bw": 1200,
     "boost-mode": 0,
-    "peak-perf": 450
+    "peak-perf": 275
 }
