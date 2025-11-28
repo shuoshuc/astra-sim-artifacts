@@ -12,27 +12,45 @@ TOOLS_PATH=${BASE_DIR}/tools
 TRACE_PATH=${SCRIPT_DIR}/trace
 INPUT_PATH=${SCRIPT_DIR}/inputs
 
-# Generate two traces using STG
+# Configurations
+TORUS_DIM_SIZE=4
+BLOCK_SIZE=1
+DP=4
+TP=4
+PP=2
+JOB_NAMES=("J0" "J1")
+BW=50
+
+# Generate traces using STG
 cd ${STG_DIR}
-mkdir -p ${TRACE_PATH}/J0
-python ${STG_DIR}/main.py --output_dir "${TRACE_PATH}/J0" --output_name "J0" \
-    --model_type "dense" --dp 4 --tp 4 --pp 2 \
-    --weight_sharded 0 --chakra_schema_version "v0.0.4"
-mkdir -p ${TRACE_PATH}/J1
-python ${STG_DIR}/main.py --output_dir "${TRACE_PATH}/J1" --output_name "J1" \
-    --model_type "dense" --dp 4 --tp 4 --pp 2 \
-    --weight_sharded 0 --chakra_schema_version "v0.0.4"
+JOB_SHAPES=""
+for JOB in "${JOB_NAMES[@]}"; do
+    mkdir -p ${TRACE_PATH}/${JOB}
+    python ${STG_DIR}/main.py --output_dir "${TRACE_PATH}/${JOB}" --output_name "${JOB}" \
+        --model_type "dense" --dp ${DP} --tp ${TP} --pp ${PP} \
+        --weight_sharded 0 --chakra_schema_version "v0.0.4"
+
+    # Append to the list of job shapes for placement generation.
+    if [ -n "$JOB_SHAPES" ]; then
+        JOB_SHAPES="${JOB_SHAPES},"
+    fi
+    JOB_SHAPES="${JOB_SHAPES}${JOB}:${DP}x${TP}x${PP}"
+done
+
+# Generate placement for multi-tenant scenarios.
+python ${TOOLS_PATH}/place.py -N ${TORUS_DIM_SIZE} -B ${BLOCK_SIZE} \
+    -J ${JOB_SHAPES} -o ${INPUT_PATH}/placement.json
 
 # Merge traces for multi-tenant scenarios.
 cd ${SCRIPT_DIR}
 mkdir -p ${TRACE_PATH}/merged
-python ${TOOLS_PATH}/merge_trace.py -i ${TRACE_PATH} --traces J0,J1 -o ${TRACE_PATH}/merged/ -p ${INPUT_PATH}/placement.json
+TRACES=$(IFS=, ; echo "${JOB_NAMES[*]}")
+python ${TOOLS_PATH}/merge_trace.py -i ${TRACE_PATH} --traces ${TRACES} -o ${TRACE_PATH}/merged/ -p ${INPUT_PATH}/placement.json
 
-# Generate BW matrix for torus. Make sure bandwidth (bw) and npu count are consistent with the network config.
-XSIZE=4
-YSIZE=4
-ZSIZE=4
-BW=50
+# Generate BW matrix for torus. Update bandwidth (bw) and npu count in the network config.
+XSIZE=${TORUS_DIM_SIZE}
+YSIZE=${TORUS_DIM_SIZE}
+ZSIZE=${TORUS_DIM_SIZE}
 NPUS=$((XSIZE * YSIZE * ZSIZE))
 python ${TOOLS_PATH}/gen_bw_matrix.py -x ${XSIZE} -y ${YSIZE} -z ${ZSIZE} -bw ${BW} -o ${INPUT_PATH}/schedule.txt
 sed -i "s/npus_count: \[ .* \]/npus_count: [ ${NPUS} ]/" ${INPUT_PATH}/network.yml
