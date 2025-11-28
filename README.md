@@ -40,3 +40,9 @@ To merge multiple traces in a multi-tenant experiment, use merge\_trace.py.
 ```bash
 python merge_trace.py -i /app/examples/multitenant-T1D-analytical/trace/ --traces J1,J0 -o ./tmp/ -p /app/examples/multitenant-T1D-analytical/placement.json
 ```
+
+## Place jobs
+To place jobs onto the torus, either maintaining the job shape or randomly (with an extra -r), use place.py
+```bash
+python tools/place.py -N 4 -B 2 -J J0:4x4x2,J1:4x4x2
+```
