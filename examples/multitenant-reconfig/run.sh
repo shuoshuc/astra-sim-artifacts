@@ -13,7 +13,9 @@ TRACE_PATH=${SCRIPT_DIR}/trace
 INPUT_PATH=${SCRIPT_DIR}/inputs
 
 # Configurations
-TORUS_DIM_SIZE=4
+TORUS_X_SIZE=4
+TORUS_Y_SIZE=4
+TORUS_Z_SIZE=4
 BLOCK_SIZE=1
 DP=4
 TP=4
@@ -38,8 +40,8 @@ for JOB in "${JOB_NAMES[@]}"; do
 done
 
 # Generate placement for multi-tenant scenarios.
-python ${TOOLS_PATH}/place.py -N ${TORUS_DIM_SIZE} -B ${BLOCK_SIZE} \
-    -J ${JOB_SHAPES} -o ${INPUT_PATH}/placement.json
+python ${TOOLS_PATH}/place.py -D "${TORUS_X_SIZE}x${TORUS_Y_SIZE}x${TORUS_Z_SIZE}" \
+    -B ${BLOCK_SIZE} -J ${JOB_SHAPES} -o ${INPUT_PATH}/placement.json
 
 # Merge traces for multi-tenant scenarios.
 cd ${SCRIPT_DIR}
@@ -48,11 +50,8 @@ TRACES=$(IFS=, ; echo "${JOB_NAMES[*]}")
 python ${TOOLS_PATH}/merge_trace.py -i ${TRACE_PATH} --traces ${TRACES} -o ${TRACE_PATH}/merged/ -p ${INPUT_PATH}/placement.json
 
 # Generate BW matrix for torus. Update bandwidth (bw) and npu count in the network config.
-XSIZE=${TORUS_DIM_SIZE}
-YSIZE=${TORUS_DIM_SIZE}
-ZSIZE=${TORUS_DIM_SIZE}
-NPUS=$((XSIZE * YSIZE * ZSIZE))
-python ${TOOLS_PATH}/gen_bw_matrix.py -x ${XSIZE} -y ${YSIZE} -z ${ZSIZE} -bw ${BW} -o ${INPUT_PATH}/schedule.txt
+NPUS=$((TORUS_X_SIZE * TORUS_Y_SIZE * TORUS_Z_SIZE))
+python ${TOOLS_PATH}/gen_bw_matrix.py -x ${TORUS_X_SIZE} -y ${TORUS_Y_SIZE} -z ${TORUS_Z_SIZE} -bw ${BW} -o ${INPUT_PATH}/schedule.txt
 sed -i "s/npus_count: \[ .* \]/npus_count: [ ${NPUS} ]/" ${INPUT_PATH}/network.yml
 sed -i "s/bandwidth: \[ .* \]/bandwidth: [ ${BW} ]/" ${INPUT_PATH}/network.yml
 
