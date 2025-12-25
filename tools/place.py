@@ -5,23 +5,27 @@ import random
 from math import prod
 
 
-def init_torus_blocks(N, B):
+def init_torus_blocks(dims, B):
     """
-    Initialize a list of lists, where each list contains node indices of a BxBxB block in an NxNxN torus.
+    Initialize a list of lists, where each list contains node indices of a BxBxB block in a WxLxH torus.
     Nodes in the torus are indexed in plane-major order.
     """
-    if N % B != 0:
-        raise ValueError("Block size must divide torus size exactly.")
+    for dim in dims:
+        if dim % B != 0:
+            raise ValueError("Block size must divide each torus dimension exactly.")
 
     blocks = []
-    for z_start, y_start, x_start in itertools.product(range(0, N, B), repeat=3):
+    W, L, H = dims
+    for z_start, y_start, x_start in itertools.product(
+        range(0, H, B), range(0, L, B), range(0, W, B)
+    ):
         block = []
         for z, y, x in itertools.product(
             range(z_start, z_start + B),
             range(y_start, y_start + B),
             range(x_start, x_start + B),
         ):
-            block.append(z * (N**2) + y * N + x)
+            block.append(z * (L * W) + y * W + x)
         blocks.append(block)
     return blocks
 
@@ -88,12 +92,12 @@ def dump(placement, output_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate placement.json file.")
     parser.add_argument(
-        "-N",
-        "--torus_size",
-        type=int,
+        "-D",
+        "--torus_dims",
+        type=lambda s: tuple(int(dim) for dim in s.split("x")),
+        default=(4, 4, 4),
         required=True,
-        default=4,
-        help="Size of an NxNxN Torus.",
+        help="Dimension size of an WxLxH Torus.",
     )
     parser.add_argument(
         "-B",
@@ -140,13 +144,13 @@ if __name__ == "__main__":
             )
     # Validate that total job size does not exceed torus capacity
     total_job_size = sum(prod(dims) for dims in args.jobs.values())
-    torus_size = args.torus_size**3
+    torus_size = prod(args.torus_dims)
     if total_job_size > torus_size:
         raise ValueError(
             f"Error: Total job nodes ({total_job_size}) exceed torus capacity ({torus_size})."
         )
 
-    torus_blocks = init_torus_blocks(args.torus_size, args.block_size)
+    torus_blocks = init_torus_blocks(args.torus_dims, args.block_size)
     # print(f"Initialized {len(torus_blocks)} torus blocks:\n{torus_blocks}")
     job_blocks = init_job_blocks(args.jobs, args.block_size)
     # for name, blocks in job_blocks.items():

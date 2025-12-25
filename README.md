@@ -42,7 +42,7 @@ python merge_trace.py -i /app/examples/multitenant-T1D-analytical/trace/ --trace
 ```
 
 ## Place jobs
-To place jobs onto the torus, either maintaining the job shape or randomly (with an extra -r), use place.py
+To place jobs onto the torus, either maintaining the job shape or mapping nodes randomly (with an extra -r), use place.py
 ```bash
-python tools/place.py -N 4 -B 2 -J J0:4x4x2,J1:4x4x2
+python tools/place.py -D 4x4x4 -B 2 -J J0:4x4x2,J1:4x4x2
 ```
