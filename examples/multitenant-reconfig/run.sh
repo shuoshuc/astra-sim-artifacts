@@ -14,30 +14,29 @@ INPUT_PATH=${SCRIPT_DIR}/inputs
 
 # Configurations
 TORUS_X_SIZE=4
-TORUS_Y_SIZE=4
-TORUS_Z_SIZE=4
+TORUS_Y_SIZE=2
+TORUS_Z_SIZE=2
 BLOCK_SIZE=1
-DP=4
-TP=4
-PP=2
-JOB_NAMES=("J0" "J1")
 BW=50
+JOB_NAMES=()
+JOB_SHAPES=""
 
 # Generate traces using STG
 cd ${STG_DIR}
-JOB_SHAPES=""
-for JOB in "${JOB_NAMES[@]}"; do
+while IFS="," read -r JOB DP TP PP
+do
     mkdir -p ${TRACE_PATH}/${JOB}
     python ${STG_DIR}/main.py --output_dir "${TRACE_PATH}/${JOB}" --output_name "${JOB}" \
         --model_type "dense" --dp ${DP} --tp ${TP} --pp ${PP} \
         --weight_sharded 0 --chakra_schema_version "v0.0.4"
 
     # Append to the list of job shapes for placement generation.
+    JOB_NAMES+=("${JOB}")
     if [ -n "$JOB_SHAPES" ]; then
         JOB_SHAPES="${JOB_SHAPES},"
     fi
     JOB_SHAPES="${JOB_SHAPES}${JOB}:${DP}x${TP}x${PP}"
-done
+done < "${INPUT_PATH}/jobspec.txt"
 
 # Generate placement for multi-tenant scenarios.
 python ${TOOLS_PATH}/place.py -D "${TORUS_X_SIZE}x${TORUS_Y_SIZE}x${TORUS_Z_SIZE}" \
