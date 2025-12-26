@@ -2,7 +2,7 @@ import os
 import argparse
 import math
 import json
-from platform import node
+import csv
 
 from chakra.src.third_party.utils.protolib import encodeMessage as encode_message
 from chakra.schema.protobuf.et_def_pb2 import (
@@ -17,6 +17,27 @@ from chakra.schema.protobuf.et_def_pb2 import (
 )
 
 BYTES_IN_MB = 1_048_576
+
+
+def genSingleDummyTrace(args):
+    trace_names = []
+    # Extract the trace names from the provided list file.
+    with open(args.dummy_trace_list, mode="r", encoding="utf-8") as f:
+        trace_names = [row[0] for row in csv.reader(f)]
+
+    # Create a dummy trace file for each trace name.
+    for name in trace_names:
+        with open(f"{args.output}/{name}", "wb") as et:
+            encode_message(et, GlobalMetadata(version="0.0.4"))
+            node1 = ChakraNode()
+            node1.id = 1
+            node1.name = "DummyNode"
+            node1.type = COMP_NODE
+            node1.duration_micros = 1
+            node1.attr.append(ChakraAttr(name="is_cpu_op", bool_val=False))
+            node1.attr.append(ChakraAttr(name="num_ops", int64_val=1))
+            node1.attr.append(ChakraAttr(name="tensor_size", int64_val=1))
+            encode_message(et, node1)
 
 
 def gen1d(args):
@@ -185,10 +206,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--dims",
-        nargs="+",
-        type=int,
-        required=True,
-        help="A list of integers for the dimensions of the topology. Example: --dims 8 or --dims 4 4",
+        type=lambda s: tuple(int(dim) for dim in s.split("x")),
+        default=(4, 4, 4),
+        help="Dimension size of an WxLxH Torus. Example: --dims 4x4x4",
     )
     parser.add_argument(
         "--coll_size_mb",
@@ -209,11 +229,23 @@ if __name__ == "__main__":
         default="inputs",
         help="Path for the comm_groups JSON output.",
     )
+    parser.add_argument(
+        "--dummy_trace_list",
+        type=str,
+        default="",
+        help="Path to a list containing the node names of dummy traces.",
+    )
 
     args = parser.parse_args()
     trace_path = args.output
     if not os.path.exists(trace_path):
         os.makedirs(trace_path)
+
+    # Fast path to only generate a dummy trace file and exit.
+    if args.dummy_trace_list:
+        genSingleDummyTrace(args)
+        exit(0)
+
     comm_group_path = args.comm_group_output
     if not os.path.exists(comm_group_path):
         os.makedirs(comm_group_path)
