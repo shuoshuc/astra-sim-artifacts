@@ -23,7 +23,7 @@ JOB_SHAPES=""
 
 # Generate traces using STG
 cd ${STG_DIR}
-while IFS="," read -r JOB DP TP PP || [[ -n "$LINE" ]]; do
+while IFS="," read -r JOB DP TP PP || [[ -n "$JOB" ]]; do
     mkdir -p ${TRACE_PATH}/${JOB}
     python ${STG_DIR}/main.py --output_dir "${TRACE_PATH}/${JOB}" --output_name "${JOB}" \
         --model_type "dense" --dp ${DP} --tp ${TP} --pp ${PP} \
