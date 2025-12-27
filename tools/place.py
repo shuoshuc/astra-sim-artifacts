@@ -57,6 +57,25 @@ def init_job_blocks(jobs, B):
     return job_blocks
 
 
+def parse_jobspec(file_path):
+    """
+    Parses a jobspec file (CSV: Name,D,T,P) and returns a dictionary mapping job names to shapes.
+    """
+    jobs = {}
+    with open(file_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split(",")
+            if len(parts) != 4:
+                raise RuntimeError(f"Incorrect number of columns: {line}")
+            name = parts[0]
+            dims = tuple(int(x) for x in parts[1:4])
+            jobs[name] = dims
+    return jobs
+
+
 def assign_placement(torus_blocks, job_blocks, is_random):
     """
     Assigns torus blocks to job blocks randomly and returns a placement dictionary mapping
@@ -108,34 +127,26 @@ if __name__ == "__main__":
         help="Size of an BxBxB block.",
     )
     parser.add_argument(
+        "-J",
+        "--jobspec",
+        type=str,
+        required=True,
+        help="Path to the jobspec file, which contains job shapes.",
+    )
+    parser.add_argument(
         "-o", "--output", default="placement.json", help="Output JSON file path."
     )
     parser.add_argument(
         "-r", "--random", action="store_true", help="Assign placement randomly."
     )
 
-    class JobShapesAction(argparse.Action):
-        def __call__(self, parser, namespace, values, option_string=None):
-            jobs = {}
-            for v in values.split(","):
-                try:
-                    name, shape = v.split(":")
-                    dims = [int(d) for d in shape.split("x") if d]
-                    jobs[name] = dims
-                except Exception:
-                    parser.error(f"Invalid job shape '{v}'. Expected Name:AxBxC...")
-            setattr(namespace, "jobs", jobs)
-
-    parser.add_argument(
-        "-J",
-        "--jobs",
-        action=JobShapesAction,
-        help="Specify jobs by shape as Name:AxBxC (comma separated).",
-    )
-
     args = parser.parse_args()
+
+    # Parse jobspec and construct jobs.
+    jobs = parse_jobspec(args.jobspec)
+
     # Validate that block size does not exceed the smallest dimension of any job
-    for name, dims in args.jobs.items():
+    for name, dims in jobs.items():
         min_dim = min(dims)
         if args.block_size > min_dim:
             raise ValueError(
@@ -143,7 +154,7 @@ if __name__ == "__main__":
                 f"the smallest dimension ({min_dim}) in job {name} : {dims}."
             )
     # Validate that total job size does not exceed torus capacity
-    total_job_size = sum(prod(dims) for dims in args.jobs.values())
+    total_job_size = sum(prod(dims) for dims in jobs.values())
     torus_size = prod(args.torus_dims)
     if total_job_size > torus_size:
         raise ValueError(
@@ -152,7 +163,7 @@ if __name__ == "__main__":
 
     torus_blocks = init_torus_blocks(args.torus_dims, args.block_size)
     # print(f"Initialized {len(torus_blocks)} torus blocks:\n{torus_blocks}")
-    job_blocks = init_job_blocks(args.jobs, args.block_size)
+    job_blocks = init_job_blocks(jobs, args.block_size)
     # for name, blocks in job_blocks.items():
     #     print(f"Initialized {len(blocks)} blocks for job {name}:\n{blocks}")
     placement = assign_placement(torus_blocks, job_blocks, args.random)
