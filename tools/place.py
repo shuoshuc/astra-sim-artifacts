@@ -2,7 +2,9 @@ import argparse
 import itertools
 import json
 import random
+from natsort import natsorted
 from math import prod
+from placement_lib import FirstFit
 
 
 def init_torus_blocks(dims, B):
@@ -76,7 +78,7 @@ def parse_jobspec(file_path):
     return jobs
 
 
-def assign_placement(torus_blocks, job_blocks, is_random):
+def block_placement(torus_blocks, job_blocks, is_random):
     """
     Assigns torus blocks to job blocks randomly and returns a placement dictionary mapping
     job node identifiers to torus node indices.
@@ -94,16 +96,26 @@ def assign_placement(torus_blocks, job_blocks, is_random):
     return placement
 
 
+def firstfit_placement(torus_dims, jobs):
+    """
+    Uses First-Fit placement policy to allocate jobs.
+    """
+    placement = {}
+    W, L, H = torus_dims
+    FF = FirstFit(W, L, H)
+
+    for name, shape in jobs.items():
+        mapping = FF.allocate(shape)
+        if not mapping:
+            raise RuntimeError(f"Failed to place job {name} with shape {shape}.")
+        for j_idx in sorted(mapping.keys()):
+            placement[f"{name}-{j_idx}"] = mapping[j_idx]
+
+    return placement
+
+
 def dump(placement, output_path):
-    placement = dict(
-        sorted(
-            placement.items(),
-            key=lambda item: (
-                item[0].split("-")[0],
-                int(item[0].split("-")[1]),
-            ),
-        )
-    )
+    placement = dict(natsorted(placement.items()))
     with open(output_path, "w") as f:
         json.dump(placement, f, indent=4)
 
@@ -122,7 +134,6 @@ if __name__ == "__main__":
         "-B",
         "--block_size",
         type=int,
-        required=True,
         default=2,
         help="Size of an BxBxB block.",
     )
@@ -137,22 +148,16 @@ if __name__ == "__main__":
         "-o", "--output", default="placement.json", help="Output JSON file path."
     )
     parser.add_argument(
+        "-P", "--policy", default="firstfit", help="Placement policy to use."
+    )
+    parser.add_argument(
         "-r", "--random", action="store_true", help="Assign placement randomly."
     )
 
     args = parser.parse_args()
-
     # Parse jobspec and construct jobs.
     jobs = parse_jobspec(args.jobspec)
 
-    # Validate that block size does not exceed the smallest dimension of any job
-    for name, dims in jobs.items():
-        min_dim = min(dims)
-        if args.block_size > min_dim:
-            raise ValueError(
-                f"Error: Block size ({args.block_size}) is greater than "
-                f"the smallest dimension ({min_dim}) in job {name} : {dims}."
-            )
     # Validate that total job size does not exceed torus capacity
     total_job_size = sum(prod(dims) for dims in jobs.values())
     torus_size = prod(args.torus_dims)
@@ -161,11 +166,24 @@ if __name__ == "__main__":
             f"Error: Total job nodes ({total_job_size}) exceed torus capacity ({torus_size})."
         )
 
-    torus_blocks = init_torus_blocks(args.torus_dims, args.block_size)
-    # print(f"Initialized {len(torus_blocks)} torus blocks:\n{torus_blocks}")
-    job_blocks = init_job_blocks(jobs, args.block_size)
-    # for name, blocks in job_blocks.items():
-    #     print(f"Initialized {len(blocks)} blocks for job {name}:\n{blocks}")
-    placement = assign_placement(torus_blocks, job_blocks, args.random)
+    if args.policy == "firstfit":
+        placement = firstfit_placement(args.torus_dims, jobs)
+    else:
+        # Validate that block size does not exceed the smallest dimension of any job
+        for name, dims in jobs.items():
+            min_dim = min(dims)
+            if args.block_size > min_dim:
+                raise ValueError(
+                    f"Error: Block size ({args.block_size}) is greater than "
+                    f"the smallest dimension ({min_dim}) in job {name} : {dims}."
+                )
+
+        torus_blocks = init_torus_blocks(args.torus_dims, args.block_size)
+        # print(f"Initialized {len(torus_blocks)} torus blocks:\n{torus_blocks}")
+        job_blocks = init_job_blocks(jobs, args.block_size)
+        # for name, blocks in job_blocks.items():
+        #     print(f"Initialized {len(blocks)} blocks for job {name}:\n{blocks}")
+        placement = block_placement(torus_blocks, job_blocks, args.random)
+
     # print(f"Final Placement:\n{placement}")
     dump(placement, args.output)
