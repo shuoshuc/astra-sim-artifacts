@@ -18,6 +18,7 @@ TORUS_Y_SIZE=2
 TORUS_Z_SIZE=2
 BLOCK_SIZE=1
 BW=50
+POLICY="firstfit"
 NCORE=$(( $(nproc) - 2 ))
 if [ "${NCORE}" -lt 1 ]; then NCORE=1; fi
 
@@ -38,7 +39,7 @@ parallel --jobs ${NCORE} --colsep ',' '
 # [Step 3] Generate placement for multi-tenant scenarios.
 python ${TOOLS_PATH}/place.py -D "${TORUS_X_SIZE}x${TORUS_Y_SIZE}x${TORUS_Z_SIZE}" \
     -B ${BLOCK_SIZE} -J "${INPUT_PATH}/jobspec.txt" -o ${INPUT_PATH}/placement.json \
-    -P "firstfit"
+    -P ${POLICY}
 
 # [Step 4] Merge traces for multi-tenant scenarios.
 cd ${SCRIPT_DIR}
