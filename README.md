@@ -7,7 +7,10 @@ docker build -t astra .
 ```
 
 # Run an example experiment
-Next, you can start the docker container and run a small 8-node allreduce experiment on a 1D torus.
+Next, you can start the docker container and run an experiment.
+The easiest way is to invoke `./start.sh`, which will run a multitenant experiment automatically and export the outputs to `./output/`.
+
+Alternatively, you can also manually launch an experiment, e.g., a small 8-node allreduce experiment on a 1D torus.
 To start the container, execute
 ```bash
 docker run -it --ipc=host -v $(pwd)/tools:/app/tools -v $(pwd)/examples:/app/examples astra
