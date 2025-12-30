@@ -1,4 +1,16 @@
+import math
 import numpy as np
+from hilbertcurve.hilbertcurve import HilbertCurve
+
+
+def coord_to_linear_index(x, y, z, dims):
+    """
+    Converts 3D coordinates to plane-major linear index.
+    Convention: X is fastest changing, Z is slowest.
+    Index = (z * L * W) + (y * W) + x
+    """
+    W_dim, L_dim, H_dim = dims
+    return (z * L_dim * W_dim) + (y * W_dim) + x
 
 
 class FirstFit:
@@ -11,15 +23,6 @@ class FirstFit:
         self.W, self.L, self.H = W, L, H
         # Grid stores occupancy: 0 = free, 1 = occupied
         self.grid = np.zeros((W, L, H), dtype=int)
-
-    def _get_linear_index(self, x, y, z, dims):
-        """
-        Converts 3D coordinates to plane-major linear index.
-        Convention: X is fastest changing, Z is slowest.
-        Index = (z * L * W) + (y * W) + x
-        """
-        W_dim, L_dim, H_dim = dims
-        return (z * L_dim * W_dim) + (y * W_dim) + x
 
     def _get_integral_volume(self):
         """Creates a 3D prefix sum for O(1) volume checks."""
@@ -82,11 +85,70 @@ class FirstFit:
                     self.grid[px, py, pz] = 1
 
                     # 3. Calculate linear indices (X is fastest)
-                    job_idx = self._get_linear_index(a, b, c, (A, B, C))
-                    torus_idx = self._get_linear_index(
+                    job_idx = coord_to_linear_index(a, b, c, (A, B, C))
+                    torus_idx = coord_to_linear_index(
                         px, py, pz, (self.W, self.L, self.H)
                     )
 
                     mapping[job_idx] = torus_idx
+
+        return mapping
+
+
+class SpaceFillingCurve:
+    """
+    Space Filling Curve (SFC) placement algorithm.
+    Using Hilbert Curve as a specific implementation.
+    """
+
+    def __init__(self, W, L, H):
+        self.W, self.L, self.H = W, L, H
+        # Grid stores occupancy: 0 = free, 1 = occupied
+        self.grid = np.zeros((W, L, H), dtype=int)
+
+        # Calculate iterations P such that 2^P >= max(W, L, H)
+        P = math.ceil(math.log2(max(W, L, H)))
+        # Torus dimension is 3D.
+        torus_dim = 3
+        # Initialize Hilbert Curve with multiprocessing.
+        self.sfc = HilbertCurve(P, torus_dim, n_procs=-1)
+
+    def _fetch_availability(self):
+        """
+        Returns a sorted list of SFC indices for all free nodes in the grid.
+        """
+        # Get coordinates of free nodes
+        free_coords = np.argwhere(self.grid == 0)
+        # Get Hilbert indices
+        distances = self.sfc.distances_from_points(free_coords)
+        # Return sorted list
+        return sorted(distances)
+
+    def allocate(self, shape):
+        """
+        Allocates job and returns {job_linear_index: torus_linear_index}
+        """
+        A, B, C = shape
+        # N is the total number of nodes required for the job
+        N = A * B * C
+
+        # Get all available Hilbert indices
+        available_indices = self._fetch_availability()
+        if len(available_indices) < N:
+            return None
+
+        # Allocate the first N available nodes that are closest together
+        # and convert back to coordinates.
+        alloc_coords = self.sfc.points_from_distances(available_indices[:N])
+
+        mapping = {}
+        # Job-internal node index is already linearized as i. It maps to the
+        # linearized torus index from the allocated coordinates.
+        for i in range(N):
+            x, y, z = alloc_coords[i]
+            # Mark as occupied
+            self.grid[x, y, z] = 1
+            # Map to torus index
+            mapping[i] = coord_to_linear_index(x, y, z, (self.W, self.L, self.H))
 
         return mapping

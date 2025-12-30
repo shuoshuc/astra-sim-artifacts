@@ -104,7 +104,7 @@ RUN git clone https://github.com/astra-sim/symbolic_tensor_graph STG
 
 
 ### ================== Finalize ==========================
-RUN pip3 install natsort
+RUN pip3 install natsort hilbertcurve
 ## Move to the application directory
 WORKDIR /app
 ### ======================================================

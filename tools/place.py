@@ -4,7 +4,7 @@ import json
 import random
 from natsort import natsorted
 from math import prod
-from placement_lib import FirstFit
+from placement_lib import FirstFit, SpaceFillingCurve
 
 
 def init_torus_blocks(dims, B):
@@ -96,18 +96,26 @@ def block_placement(torus_blocks, job_blocks, is_random):
     return placement
 
 
-def firstfit_placement(torus_dims, jobs):
+def place_with_policy(torus_dims, jobs, policy):
     """
-    Uses First-Fit placement policy to allocate jobs.
+    Generate job placement with a policy.
     """
     placement = {}
     W, L, H = torus_dims
-    FF = FirstFit(W, L, H)
+
+    if policy == "firstfit":
+        policy_impl = FirstFit(W, L, H)
+    elif policy == "sfc":
+        policy_impl = SpaceFillingCurve(W, L, H)
+    else:
+        raise ValueError(f"Unknown placement policy: {policy}")
 
     for name, shape in jobs.items():
-        mapping = FF.allocate(shape)
+        mapping = policy_impl.allocate(shape)
         if not mapping:
-            raise RuntimeError(f"Failed to place job {name} with shape {shape}.")
+            raise RuntimeError(
+                f"[{policy}] Failed to place job {name} with shape {shape}."
+            )
         for j_idx in sorted(mapping.keys()):
             placement[f"{name}-{j_idx}"] = mapping[j_idx]
 
@@ -166,8 +174,8 @@ if __name__ == "__main__":
             f"Error: Total job nodes ({total_job_size}) exceed torus capacity ({torus_size})."
         )
 
-    if args.policy == "firstfit":
-        placement = firstfit_placement(args.torus_dims, jobs)
+    if args.policy in ["firstfit", "sfc"]:
+        placement = place_with_policy(args.torus_dims, jobs, args.policy)
     else:
         # Validate that block size does not exceed the smallest dimension of any job
         for name, dims in jobs.items():
