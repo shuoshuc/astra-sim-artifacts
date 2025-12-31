@@ -111,7 +111,7 @@ class SpaceFillingCurve:
         # Torus dimension is 3D.
         torus_dim = 3
         # Initialize Hilbert Curve with multiprocessing.
-        self.sfc = HilbertCurve(P, torus_dim, n_procs=-1)
+        self.sfc = HilbertCurve(P, torus_dim)
 
     def _fetch_availability(self):
         """
