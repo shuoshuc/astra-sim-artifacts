@@ -4,7 +4,7 @@ import json
 import random
 from natsort import natsorted
 from math import prod
-from placement_lib import FirstFit, SpaceFillingCurve
+from placement_lib import FirstFit, SpaceFillingCurve, L1Clustering
 
 
 def init_torus_blocks(dims, B):
@@ -107,6 +107,8 @@ def place_with_policy(torus_dims, jobs, policy):
         policy_impl = FirstFit(W, L, H)
     elif policy == "sfc":
         policy_impl = SpaceFillingCurve(W, L, H)
+    elif policy == "l1clustering":
+        policy_impl = L1Clustering(W, L, H)
     else:
         raise ValueError(f"Unknown placement policy: {policy}")
 
@@ -174,7 +176,7 @@ if __name__ == "__main__":
             f"Error: Total job nodes ({total_job_size}) exceed torus capacity ({torus_size})."
         )
 
-    if args.policy in ["firstfit", "sfc"]:
+    if args.policy in ["firstfit", "sfc", "l1clustering"]:
         placement = place_with_policy(args.torus_dims, jobs, args.policy)
     else:
         # Validate that block size does not exceed the smallest dimension of any job

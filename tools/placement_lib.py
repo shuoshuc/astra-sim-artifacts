@@ -152,3 +152,75 @@ class SpaceFillingCurve:
             mapping[i] = coord_to_linear_index(x, y, z, (self.W, self.L, self.H))
 
         return mapping
+
+
+class L1Clustering:
+    """
+    L1 Clustering placement algorithm (MC1x1).
+    Minimizes the sum of L1 distances from a center node on a torus.
+    """
+
+    def __init__(self, W, L, H):
+        self.W, self.L, self.H = W, L, H
+        self.dims = np.array([W, L, H])
+        # Grid stores occupancy: 0 = free, 1 = occupied
+        self.grid = np.zeros((W, L, H), dtype=int)
+
+        # Precompute coordinates for distance calculations
+        x, y, z = np.indices((W, L, H))
+        self.coords = np.stack((x, y, z), axis=-1).reshape(-1, 3)
+
+    def _get_torus_distance(self, center_coord):
+        diff = np.abs(self.coords - center_coord)
+        dist_per_dim = np.minimum(diff, self.dims - diff)
+        return np.sum(dist_per_dim, axis=1)
+
+    def allocate(self, shape):
+        A, B, C = shape
+        k = A * B * C
+
+        # Find idle nodes
+        idle_indices = np.where(self.grid.flatten() == 0)[0]
+
+        if len(idle_indices) < k:
+            return None
+
+        best_cost = float("inf")
+        best_selection = None
+
+        # Optimization: check subset of idle nodes
+        step = max(1, len(idle_indices) // 100)
+
+        for center_idx in idle_indices[::step]:
+            center_coord = self.coords[center_idx]
+            distances = self._get_torus_distance(center_coord)
+
+            # We only care about distances to idle nodes
+            idle_distances = distances[idle_indices]
+
+            # Find k closest idle nodes
+            if len(idle_distances) == k:
+                k_closest_local_idx = np.arange(k)
+            else:
+                k_closest_local_idx = np.argpartition(idle_distances, k - 1)[:k]
+
+            current_cost = np.sum(idle_distances[k_closest_local_idx])
+
+            if current_cost < best_cost:
+                best_cost = current_cost
+                best_selection = idle_indices[k_closest_local_idx]
+
+        if best_selection is None:
+            return None
+
+        mapping = {}
+        # Sort selection to have deterministic mapping
+        best_selection = sorted(best_selection)
+
+        for i, idx in enumerate(best_selection):
+            x, y, z = self.coords[idx]
+            self.grid[x, y, z] = 1
+            torus_idx = coord_to_linear_index(x, y, z, (self.W, self.L, self.H))
+            mapping[i] = int(torus_idx)
+
+        return mapping
