@@ -13,10 +13,10 @@ TRACE_PATH=${SCRIPT_DIR}/trace
 INPUT_PATH=${SCRIPT_DIR}/inputs
 
 # Configurations
-TORUS_X_SIZE=4
-TORUS_Y_SIZE=2
-TORUS_Z_SIZE=2
-BLOCK_SIZE=1
+TORUS_X_SIZE=16
+TORUS_Y_SIZE=16
+TORUS_Z_SIZE=16
+BLOCK_DIMS="1x1x1"
 BW=50
 POLICY="firstfit"
 NCORE=$(( $(nproc) - 2 ))
@@ -24,7 +24,7 @@ if [ "${NCORE}" -lt 1 ]; then NCORE=1; fi
 
 # [Step 1] Prepare jobspec with main jobs and background jobs.
 python ${TOOLS_PATH}/create_jobspec.py -D "${TORUS_X_SIZE}x${TORUS_Y_SIZE}x${TORUS_Z_SIZE}" \
-    -J "2x2x2,2x2x1" -o "${INPUT_PATH}/jobspec.txt"
+    -J "2x2x2" -o "${INPUT_PATH}/jobspec.txt"
 
 # [Step 2] Generate traces using STG (in parallel).
 cd ${STG_DIR}
@@ -38,7 +38,7 @@ parallel --jobs ${NCORE} --colsep ',' '
 
 # [Step 3] Generate placement for multi-tenant scenarios.
 python ${TOOLS_PATH}/place.py -D "${TORUS_X_SIZE}x${TORUS_Y_SIZE}x${TORUS_Z_SIZE}" \
-    -B ${BLOCK_SIZE} -J "${INPUT_PATH}/jobspec.txt" -o ${INPUT_PATH}/placement.json \
+    -B ${BLOCK_DIMS} -J "${INPUT_PATH}/jobspec.txt" -o ${INPUT_PATH}/placement.json \
     -P ${POLICY}
 
 # [Step 4] Merge traces for multi-tenant scenarios.

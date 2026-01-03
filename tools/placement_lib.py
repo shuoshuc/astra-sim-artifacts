@@ -1,4 +1,6 @@
 import math
+import itertools
+import random
 import numpy as np
 from hilbertcurve.hilbertcurve import HilbertCurve
 
@@ -222,5 +224,83 @@ class L1Clustering:
             self.grid[x, y, z] = 1
             torus_idx = coord_to_linear_index(x, y, z, (self.W, self.L, self.H))
             mapping[i] = int(torus_idx)
+
+        return mapping
+
+
+class BlockRandom:
+    """
+    Block Random placement policy.
+    Divides torus and jobs into BXxBYxBZ blocks and assigns them randomly.
+    """
+
+    def __init__(self, W, L, H, BX, BY, BZ):
+        self.W, self.L, self.H = W, L, H
+        self.BX, self.BY, self.BZ = BX, BY, BZ
+
+        if W % BX != 0 or L % BY != 0 or H % BZ != 0:
+            raise ValueError(
+                f"Torus dimensions ({W}, {L}, {H}) must be divisible "
+                f"by block dimensions ({BX}, {BY}, {BZ})"
+            )
+
+        # Initialize torus blocks
+        self.torus_blocks = []
+        for z_start, y_start, x_start in itertools.product(
+            range(0, H, self.BZ), range(0, L, self.BY), range(0, W, self.BX)
+        ):
+            block = []
+            for z, y, x in itertools.product(
+                range(z_start, z_start + self.BZ),
+                range(y_start, y_start + self.BY),
+                range(x_start, x_start + self.BX),
+            ):
+                # Ensure we don't go out of bounds
+                if x < W and y < L and z < H:
+                    block.append(coord_to_linear_index(x, y, z, (W, L, H)))
+            if block:
+                self.torus_blocks.append(block)
+
+    def allocate(self, shape):
+        A, B, C = shape
+
+        if self.BX > A or self.BY > B or self.BZ > C:
+            raise ValueError(
+                f"Block dimensions ({self.BX}, {self.BY}, {self.BZ}) cannot be "
+                f"larger than job dimensions ({A}, {B}, {C})"
+            )
+
+        job_blocks = []
+        for z_start, y_start, x_start in itertools.product(
+            range(0, C, self.BZ), range(0, B, self.BY), range(0, A, self.BX)
+        ):
+            block = []
+            for z, y, x in itertools.product(
+                range(z_start, z_start + self.BZ),
+                range(y_start, y_start + self.BY),
+                range(x_start, x_start + self.BX),
+            ):
+                # Check bounds to avoid overlapping indices or invalid nodes
+                if x < A and y < B and z < C:
+                    block.append(coord_to_linear_index(x, y, z, (A, B, C)))
+
+            if block:
+                job_blocks.append(block)
+
+        if len(job_blocks) > len(self.torus_blocks):
+            raise RuntimeError(
+                f"Not enough torus blocks ({len(self.torus_blocks)}) "
+                f"to allocate job blocks ({len(job_blocks)})"
+            )
+
+        mapping = {}
+        for j_block in job_blocks:
+            # Pick random torus block
+            ptr = random.randrange(len(self.torus_blocks))
+            t_block = self.torus_blocks.pop(ptr)
+
+            # Map nodes
+            for j_node, t_node in zip(j_block, t_block):
+                mapping[j_node] = t_node
 
         return mapping
