@@ -109,7 +109,7 @@ RUN mkdir topomatch
 RUN curl -L https://gitlab.inria.fr/-/project/15442/uploads/8d197c8f925352c5355e79ee9d5488b1/topomatch-1.3.1.tar.gz \
     | tar -xvz -C topomatch --strip-components=1
 WORKDIR /app/topomatch
-RUN ./configure CFLAGS="-I/usr/include/scotch-int64" CPPFLAGS="-I/usr/include/scotch-int64" LDFLAGS="-L/usr/lib/x86_64-linux-gnu/scotch-int64"
+RUN ./configure CFLAGS="-I/usr/include/scotch" CPPFLAGS="-I/usr/include/scotch" LDFLAGS="-L/usr/lib/x86_64-linux-gnu"
 RUN make && make install
 RUN echo "/usr/local/lib" | tee /etc/ld.so.conf.d/topomatch.conf && ldconfig
 ### ======================================================
