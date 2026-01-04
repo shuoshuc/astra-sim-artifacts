@@ -7,9 +7,8 @@ FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt -y update && apt -y upgrade
 RUN apt -y install \
-    coreutils wget vim git \
-    gcc g++ clang-format \
-    make cmake \
+    coreutils wget curl vim git \
+    gcc g++ clang-format make cmake \
     libboost-dev libboost-program-options-dev \
     openmpi-bin openmpi-doc libopenmpi-dev \
     python3 python3-pip python3-venv \
@@ -106,13 +105,13 @@ RUN git clone https://github.com/astra-sim/symbolic_tensor_graph STG
 ### ============= TopoMatch Installation ==================
 WORKDIR /app
 RUN apt -y install hwloc libhwloc-dev libscotch-dev
-RUN wget https://gitlab.inria.fr/-/project/15442/uploads/8d197c8f925352c5355e79ee9d5488b1/topomatch-1.3.1.tar.gz
 RUN mkdir topomatch
-RUN tar -xvf topomatch-1.3.1.tar.gz -C topomatch --strip-components=1
-RUN rm topomatch-1.3.1.tar.gz
+RUN curl -L https://gitlab.inria.fr/-/project/15442/uploads/8d197c8f925352c5355e79ee9d5488b1/topomatch-1.3.1.tar.gz \
+    | tar -xvz -C topomatch --strip-components=1
 WORKDIR /app/topomatch
 RUN ./configure CFLAGS="-I/usr/include/scotch-int64" CPPFLAGS="-I/usr/include/scotch-int64" LDFLAGS="-L/usr/lib/x86_64-linux-gnu/scotch-int64"
-RUN make
+RUN make && make install
+RUN echo "/usr/local/lib" | tee /etc/ld.so.conf.d/topomatch.conf && ldconfig
 ### ======================================================
 
 
