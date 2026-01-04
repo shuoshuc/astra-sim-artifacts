@@ -103,6 +103,19 @@ RUN git clone https://github.com/astra-sim/symbolic_tensor_graph STG
 ### ======================================================
 
 
+### ============= TopoMatch Installation ==================
+WORKDIR /app
+RUN apt -y install hwloc libhwloc-dev libscotch-dev
+RUN wget https://gitlab.inria.fr/-/project/15442/uploads/8d197c8f925352c5355e79ee9d5488b1/topomatch-1.3.1.tar.gz
+RUN mkdir topomatch
+RUN tar -xvf topomatch-1.3.1.tar.gz -C topomatch --strip-components=1
+RUN rm topomatch-1.3.1.tar.gz
+WORKDIR /app/topomatch
+RUN ./configure CFLAGS="-I/usr/include/scotch-int64" CPPFLAGS="-I/usr/include/scotch-int64" LDFLAGS="-L/usr/lib/x86_64-linux-gnu/scotch-int64"
+RUN make
+### ======================================================
+
+
 ### ================== Finalize ==========================
 RUN pip3 install natsort hilbertcurve
 ## Move to the application directory
