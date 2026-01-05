@@ -36,24 +36,31 @@ parallel --jobs ${NCORE} --colsep ',' '
         --weight_sharded 0 --chakra_schema_version "v0.0.4"
 ' :::: "${INPUT_PATH}/jobspec.txt"
 
-# [Step 3] Generate placement for multi-tenant scenarios.
+# [Step 3] (only for topomatch) Build traffic matrices for the traces.
+cd ${SCRIPT_DIR}
+export TOOLS_PATH TRACE_PATH
+parallel --jobs ${NCORE} --colsep ',' '
+    python ${TOOLS_PATH}/topomatch_prep.py -f "${TRACE_PATH}/{1}" -m "${TRACE_PATH}/{1}/traffic.mat"
+' :::: "${INPUT_PATH}/jobspec.txt"
+
+# [Step 4] Generate placement for multi-tenant scenarios.
 python ${TOOLS_PATH}/place.py -D "${TORUS_X_SIZE}x${TORUS_Y_SIZE}x${TORUS_Z_SIZE}" \
     -B ${BLOCK_DIMS} -J "${INPUT_PATH}/jobspec.txt" -o ${INPUT_PATH}/placement.json \
     -P ${POLICY}
 
-# [Step 4] Merge traces for multi-tenant scenarios.
+# [Step 5] Merge traces for multi-tenant scenarios.
 cd ${SCRIPT_DIR}
 mkdir -p ${TRACE_PATH}/merged
 TRACES=$(cut -d, -f1 "${INPUT_PATH}/jobspec.txt" | paste -sd, -)
 python ${TOOLS_PATH}/merge_trace.py -i ${TRACE_PATH} --traces ${TRACES} -o ${TRACE_PATH}/merged/ -p ${INPUT_PATH}/placement.json
 
-# [Step 5] Generate BW matrix for torus. Update bandwidth (bw) and npu count in the network config.
+# [Step 6] Generate BW matrix for torus. Update bandwidth (bw) and npu count in the network config.
 NPUS=$((TORUS_X_SIZE * TORUS_Y_SIZE * TORUS_Z_SIZE))
 python ${TOOLS_PATH}/gen_bw_matrix.py -x ${TORUS_X_SIZE} -y ${TORUS_Y_SIZE} -z ${TORUS_Z_SIZE} -bw ${BW} -o ${INPUT_PATH}/schedule.txt
 sed -i "s/npus_count: \[ .* \]/npus_count: [ ${NPUS} ]/" ${INPUT_PATH}/network.yml
 sed -i "s/bandwidth: \[ .* \]/bandwidth: [ ${BW} ]/" ${INPUT_PATH}/network.yml
 
-# [Step 6] Run ASTRA-sim
+# [Step 7] Run ASTRA-sim
 (
 ${ASTRA_SIM} \
     --workload-configuration=${TRACE_PATH}/merged/trace \
@@ -64,5 +71,5 @@ ${ASTRA_SIM} \
     --circuit-schedules=${INPUT_PATH}/schedule.txt
 )
 
-# [Step 7] Extract JCT into a csv file.
+# [Step 8] Extract JCT into a csv file.
 python ${TOOLS_PATH}/extract_jct.py -p ${INPUT_PATH}/placement.json -l ${SCRIPT_DIR}/log/jct.log -o ${SCRIPT_DIR}/jct.csv
