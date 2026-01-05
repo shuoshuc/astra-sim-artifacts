@@ -104,10 +104,8 @@ RUN git clone https://github.com/astra-sim/symbolic_tensor_graph STG
 
 ### ============= TopoMatch Installation ==================
 WORKDIR /app
-RUN apt -y install hwloc libhwloc-dev libscotch-dev
-RUN mkdir topomatch
-RUN curl -L https://gitlab.inria.fr/-/project/15442/uploads/8d197c8f925352c5355e79ee9d5488b1/topomatch-1.3.1.tar.gz \
-    | tar -xvz -C topomatch --strip-components=1
+RUN apt -y install hwloc libhwloc-dev libscotch-dev pkg-config
+RUN git clone --depth 1 https://github.com/shuoshuc/TopoMatch.git topomatch
 WORKDIR /app/topomatch
 RUN ./configure CFLAGS="-I/usr/include/scotch" CPPFLAGS="-I/usr/include/scotch" LDFLAGS="-L/usr/lib/x86_64-linux-gnu"
 RUN make && make install
