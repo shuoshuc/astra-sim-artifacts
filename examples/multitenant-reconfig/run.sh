@@ -46,7 +46,7 @@ parallel --jobs ${NCORE} --colsep ',' '
 # [Step 4] Generate placement for multi-tenant scenarios.
 python ${TOOLS_PATH}/place.py -D "${TORUS_X_SIZE}x${TORUS_Y_SIZE}x${TORUS_Z_SIZE}" \
     -B ${BLOCK_DIMS} -J "${INPUT_PATH}/jobspec.txt" -o ${INPUT_PATH}/placement.json \
-    -P ${POLICY}
+    -P ${POLICY} -T ${TRACE_PATH}
 
 # [Step 5] Merge traces for multi-tenant scenarios.
 cd ${SCRIPT_DIR}

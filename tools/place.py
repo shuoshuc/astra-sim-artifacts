@@ -2,7 +2,7 @@ import argparse
 import json
 from natsort import natsorted
 from math import prod
-from placement_lib import FirstFit, SpaceFillingCurve, L1Clustering, BlockRandom
+from placement_lib import FirstFit, SpaceFillingCurve, L1Clustering, BlockRandom, TopoMatch
 
 
 def parse_jobspec(file_path):
@@ -24,7 +24,7 @@ def parse_jobspec(file_path):
     return jobs
 
 
-def place_with_policy(torus_dims, jobs, policy, block_dims):
+def place_with_policy(torus_dims, jobs, policy, block_dims, traffic_dir):
     """
     Generate job placement with a policy.
     """
@@ -39,11 +39,13 @@ def place_with_policy(torus_dims, jobs, policy, block_dims):
         policy_impl = L1Clustering(W, L, H)
     elif policy == "random":
         policy_impl = BlockRandom(W, L, H, *block_dims)
+    elif policy == "topomatch":
+        policy_impl = TopoMatch(W, L, H, traffic_dir)
     else:
         raise ValueError(f"Unknown placement policy: {policy}")
 
     for name, shape in jobs.items():
-        mapping = policy_impl.allocate(shape)
+        mapping = policy_impl.allocate(name, shape)
         if not mapping:
             raise RuntimeError(
                 f"[{policy}] Failed to place job {name} with shape {shape}."
@@ -86,6 +88,12 @@ if __name__ == "__main__":
         help="Path to the jobspec file, which contains job shapes.",
     )
     parser.add_argument(
+        "-T",
+        "--traffic_dir",
+        type=str,
+        help="Path to the traffic files, which contains traffic matrices for each job.",
+    )
+    parser.add_argument(
         "-o", "--output", default="placement.json", help="Output JSON file path."
     )
     parser.add_argument(
@@ -104,6 +112,6 @@ if __name__ == "__main__":
             f"Error: Total job nodes ({total_job_size}) exceed torus capacity ({torus_size})."
         )
 
-    placement = place_with_policy(args.torus_dims, jobs, args.policy, args.block_dims)
+    placement = place_with_policy(args.torus_dims, jobs, args.policy, args.block_dims, args.traffic_dir)
     # print(f"Final Placement:\n{placement}")
     dump(placement, args.output)

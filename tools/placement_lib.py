@@ -1,7 +1,9 @@
 import math
 import itertools
 import random
+import subprocess
 import numpy as np
+from pathlib import Path
 from hilbertcurve.hilbertcurve import HilbertCurve
 
 
@@ -13,6 +15,19 @@ def coord_to_linear_index(x, y, z, dims):
     """
     W_dim, L_dim, H_dim = dims
     return (z * L_dim * W_dim) + (y * W_dim) + x
+
+
+def linear_index_to_coord(index, dims):
+    """
+    Converts plane-major linear index to 3D coordinates.
+    Convention: X is fastest changing, Z is slowest.
+    """
+    W_dim, L_dim, H_dim = dims
+    z = index // (L_dim * W_dim)
+    rem = index % (L_dim * W_dim)
+    y = rem // W_dim
+    x = rem % W_dim
+    return x, y, z
 
 
 class FirstFit:
@@ -63,7 +78,7 @@ class FirstFit:
                         return (x, y, z)
         return None
 
-    def allocate(self, shape):
+    def allocate(self, name, shape):
         """
         Allocates job and returns {job_linear_index: torus_linear_index}
         """
@@ -126,7 +141,7 @@ class SpaceFillingCurve:
         # Return sorted list
         return sorted(distances)
 
-    def allocate(self, shape):
+    def allocate(self, name, shape):
         """
         Allocates job and returns {job_linear_index: torus_linear_index}
         """
@@ -177,7 +192,7 @@ class L1Clustering:
         dist_per_dim = np.minimum(diff, self.dims - diff)
         return np.sum(dist_per_dim, axis=1)
 
-    def allocate(self, shape):
+    def allocate(self, name, shape):
         A, B, C = shape
         k = A * B * C
 
@@ -261,7 +276,7 @@ class BlockRandom:
             if block:
                 self.torus_blocks.append(block)
 
-    def allocate(self, shape):
+    def allocate(self, name, shape):
         A, B, C = shape
 
         if self.BX > A or self.BY > B or self.BZ > C:
@@ -302,5 +317,56 @@ class BlockRandom:
             # Map nodes
             for j_node, t_node in zip(j_block, t_block):
                 mapping[j_node] = t_node
+
+        return mapping
+
+
+class TopoMatch:
+    """
+    TopoMatch placement policy.
+    """
+
+    def __init__(self, W, L, H, traffic_dir):
+        self.W, self.L, self.H = W, L, H
+        # Grid stores occupancy: 0 = free, 1 = occupied
+        self.grid = np.zeros((W, L, H), dtype=int)
+        # Path to the top-level directory containing traffic files.
+        self.traffic_dir = Path(traffic_dir)
+        # Put all the intermediate files in a tmp folder.
+        self.workdir = Path("tmp")
+        self.workdir.mkdir(parents=True, exist_ok=True)
+        topo_str = f"torus3D {W} {L} {H}"
+        with open(self.workdir / "topo.tgt", "w") as f:
+            f.write(topo_str)
+
+    def allocate(self, name, shape):
+        topo_file = str(self.workdir / "topo.tgt")
+        binding_file = str(self.workdir / "binding.txt")
+        traffic_file = str(self.traffic_dir / name / "traffic.mat")
+        solution_file = str(self.workdir / "sol.txt")
+
+        # Find free nodes and write to file.
+        free_indices = sorted([
+            coord_to_linear_index(x, y, z, (self.W, self.L, self.H))
+            for x, y, z in np.argwhere(self.grid == 0)
+        ])
+        with open(binding_file, "w") as f:
+            f.write(" ".join(map(str, free_indices)))
+
+        # Block until the command returns
+        subprocess.run(f"/usr/local/bin/mapping -t {topo_file} -b {binding_file} "
+                       f"-c {traffic_file} -w {solution_file}",
+                       shell=True, check=True)
+
+        if not Path(solution_file).exists():
+            raise RuntimeError(f"Placement for job {name} not generated.")
+        with open(solution_file, "r") as f:
+            sol_mapping = [int(x) for x in f.read().strip().split(",")]
+
+        mapping = {}
+        for i, idx in enumerate(sol_mapping):
+            x, y, z = linear_index_to_coord(idx, (self.W, self.L, self.H))
+            self.grid[x, y, z] = 1
+            mapping[i] = idx
 
         return mapping
