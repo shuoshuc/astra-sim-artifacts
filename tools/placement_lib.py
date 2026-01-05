@@ -355,7 +355,7 @@ class TopoMatch:
 
         # Block until the command returns
         subprocess.run(f"/usr/local/bin/mapping -t {topo_file} -b {binding_file} "
-                       f"-c {traffic_file} -w {solution_file}",
+                       f"-c {traffic_file} -w {solution_file} -s",
                        shell=True, check=True)
 
         if not Path(solution_file).exists():
