@@ -341,9 +341,9 @@ class TopoMatch:
 
     def allocate(self, name, shape):
         topo_file = str(self.workdir / "topo.tgt")
-        binding_file = str(self.workdir / "binding.txt")
+        binding_file = str(self.workdir / f"{name}.binding")
         traffic_file = str(self.traffic_dir / name / "traffic.mat")
-        solution_file = str(self.workdir / "sol.txt")
+        solution_file = str(self.workdir / f"{name}.sol")
 
         # Find free nodes and write to file.
         free_indices = sorted([
