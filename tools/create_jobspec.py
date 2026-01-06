@@ -1,9 +1,8 @@
 import argparse
-import sys
 from math import prod
 
 
-def create_jobspec(args):
+def create_jobspec(args, bg_shape):
     job_list = [] + args.jobs
     total_nodes = prod(args.torus_dims)
     assigned_nodes = sum(prod(shape) for shape in job_list)
@@ -12,8 +11,12 @@ def create_jobspec(args):
             f"Total job nodes ({assigned_nodes}) exceed torus capacity ({total_nodes})."
         )
     while total_nodes > assigned_nodes:
-        job_list.append((1, 1, 1))
-        assigned_nodes += 1
+        job_list.append(bg_shape)
+        assigned_nodes += prod(bg_shape)
+    if assigned_nodes != total_nodes:
+        raise RuntimeError(
+            f"Total job nodes ({assigned_nodes}) do not fully use capacity ({total_nodes})."
+        )
 
     # Write jobspec to file.
     with open(args.output, "w") as f:
@@ -48,7 +51,14 @@ if __name__ == "__main__":
         help="Specify jobs by shape as AxBxC (comma separated).",
         required=True,
     )
+    parser.add_argument(
+        "-b",
+        "--bg_shape",
+        type=lambda s: tuple(int(dim) for dim in s.split("x")),
+        default=(1, 1, 1),
+        help="Background job shape.",
+    )
     parser.add_argument("-o", "--output", default="jobspec.txt", help="Output file path.")
 
     args = parser.parse_args()
-    create_jobspec(args)
+    create_jobspec(args, args.bg_shape)
