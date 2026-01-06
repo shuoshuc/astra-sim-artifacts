@@ -24,7 +24,7 @@ if [ "${NCORE}" -lt 1 ]; then NCORE=1; fi
 
 # [Step 1] Prepare jobspec with main jobs and background jobs.
 python ${TOOLS_PATH}/create_jobspec.py -D "${TORUS_X_SIZE}x${TORUS_Y_SIZE}x${TORUS_Z_SIZE}" \
-    -J "2x2x2" -o "${INPUT_PATH}/jobspec.txt"
+    -J "2x2x2" -o "${INPUT_PATH}/jobspec.txt" -b "2x2x1"
 
 # [Step 2] Generate traces using STG (in parallel).
 cd ${STG_DIR}
