@@ -341,9 +341,9 @@ class TopoMatch:
 
     def allocate(self, name, shape):
         topo_file = str(self.workdir / "topo.tgt")
-        binding_file = str(self.workdir / "binding.txt")
+        binding_file = str(self.workdir / f"{name}.binding")
         traffic_file = str(self.traffic_dir / name / "traffic.mat")
-        solution_file = str(self.workdir / "sol.txt")
+        solution_file = str(self.workdir / f"{name}.sol")
 
         # Find free nodes and write to file.
         free_indices = sorted([
@@ -355,7 +355,7 @@ class TopoMatch:
 
         # Block until the command returns
         subprocess.run(f"/usr/local/bin/mapping -t {topo_file} -b {binding_file} "
-                       f"-c {traffic_file} -w {solution_file}",
+                       f"-c {traffic_file} -w {solution_file} -s",
                        shell=True, check=True)
 
         if not Path(solution_file).exists():
