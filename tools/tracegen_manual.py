@@ -3,6 +3,8 @@ import argparse
 import math
 import json
 import csv
+from pathlib import Path
+from create_jobspec import parse_jobspec
 
 from chakra.src.third_party.utils.protolib import encodeMessage as encode_message
 from chakra.schema.protobuf.et_def_pb2 import (
@@ -19,33 +21,34 @@ from chakra.schema.protobuf.et_def_pb2 import (
 BYTES_IN_MB = 1_048_576
 
 
-def genSingleDummyTrace(args):
-    trace_names = []
-    # Extract the trace names from the provided list file.
-    with open(args.dummy_trace_list, mode="r", encoding="utf-8") as f:
-        trace_names = [row[0] for row in csv.reader(f)]
-
-    # Create a dummy trace file for each trace name.
-    for name in trace_names:
-        with open(f"{args.output}/{name}", "wb") as et:
-            encode_message(et, GlobalMetadata(version="0.0.4"))
-            node1 = ChakraNode()
-            node1.id = 1
-            node1.name = "DummyNode"
-            node1.type = COMP_NODE
-            node1.duration_micros = 1
-            node1.attr.append(ChakraAttr(name="is_cpu_op", bool_val=False))
-            node1.attr.append(ChakraAttr(name="num_ops", int64_val=1))
-            node1.attr.append(ChakraAttr(name="tensor_size", int64_val=1))
-            encode_message(et, node1)
+def genSingleDummyTrace(output, name):
+    job_path = output / name
+    job_path.mkdir(parents=True, exist_ok=True)
+    with open(job_path / f"{name}.0.et", "wb") as et:
+        encode_message(et, GlobalMetadata(version="0.0.4"))
+        node1 = ChakraNode()
+        node1.id = 1
+        node1.name = "DummyNode"
+        node1.type = COMP_NODE
+        node1.duration_micros = 1
+        node1.attr.append(ChakraAttr(name="is_cpu_op", bool_val=False))
+        node1.attr.append(ChakraAttr(name="num_ops", int64_val=1))
+        node1.attr.append(ChakraAttr(name="tensor_size", int64_val=1))
+        encode_message(et, node1)
+    with open(job_path / f"{name}.json", "w") as f:
+        json.dump({}, f, indent=2)
 
 
-def gen1d(args):
-    coll_size = args.coll_size_mb * BYTES_IN_MB
+def gen1d(output, name, shape, coll_size):
+    """
+    Generate 1D collective trace, assuming all nodes belong to the same ring.
+    """
     comm_groups = {"0": []}
+    job_path = output / name
+    job_path.mkdir(parents=True, exist_ok=True)
 
-    for npu_id in range(math.prod(args.dims)):
-        with open(f"{args.output}/trace.{npu_id}.et", "wb") as et:
+    for npu_id in range(math.prod(shape)):
+        with open(job_path / f"{name}.{npu_id}.et", "wb") as et:
             encode_message(et, GlobalMetadata(version="0.0.4"))
             node1 = ChakraNode()
             node1.id = 1
@@ -60,18 +63,20 @@ def gen1d(args):
             node1.attr.append(ChakraAttr(name="pg_name", string_val="0"))
             comm_groups["0"].append(npu_id)
             encode_message(et, node1)
+    with open(job_path / f"{name}.json", "w") as f:
+        comm_groups = {k: v for k, v in sorted(comm_groups.items())}
+        json.dump(comm_groups, f, indent=2)
 
-    return comm_groups
 
-
-def gen2d(args):
-    coll_size = args.coll_size_mb * BYTES_IN_MB
+def gen2d(output, name, shape, coll_size):
     # X dimension from left to right, Y dimension from top to bottom.
-    X, Y = args.dims
+    X, Y = shape
     comm_groups = {}
+    job_path = output / name
+    job_path.mkdir(parents=True, exist_ok=True)
 
-    for npu_id in range(math.prod(args.dims)):
-        with open(f"{args.output}/trace.{npu_id}.et", "wb") as et:
+    for npu_id in range(math.prod(shape)):
+        with open(job_path / f"{name}.{npu_id}.et", "wb") as et:
             encode_message(et, GlobalMetadata(version="0.0.4"))
 
             # ----- Dim 1 -----
@@ -113,23 +118,26 @@ def gen2d(args):
             node3.data_deps.append(node2.id)
             encode_message(et, node3)
 
-    return comm_groups
+    with open(job_path / f"{name}.json", "w") as f:
+        comm_groups = {k: v for k, v in sorted(comm_groups.items())}
+        json.dump(comm_groups, f, indent=2)
 
 
-def gen3d(args):
-    coll_size = args.coll_size_mb * BYTES_IN_MB
+def gen3d(output, name, shape, coll_size):
     # X dimension from left to right,
     # Y dimension from top to bottom,
     # Z dimension from front to back.
-    X, Y, Z = args.dims
+    X, Y, Z = shape
     comm_groups = {}
+    job_path = output / name
+    job_path.mkdir(parents=True, exist_ok=True)
 
-    for npu_id in range(math.prod(args.dims)):
+    for npu_id in range(math.prod(shape)):
         # Convert NPU ID to 3D coordinates
         coord_x = npu_id % X
         coord_y = (npu_id // X) % Y
         coord_z = npu_id // (X * Y)
-        with open(f"{args.output}/trace.{npu_id}.et", "wb") as et:
+        with open(job_path / f"{name}.{npu_id}.et", "wb") as et:
             encode_message(et, GlobalMetadata(version="0.0.4"))
 
             # ----- Dim 1 -----
@@ -196,7 +204,9 @@ def gen3d(args):
             node5.data_deps.append(node4.id)
             encode_message(et, node5)
 
-    return comm_groups
+    with open(job_path / f"{name}.json", "w") as f:
+        comm_groups = {k: v for k, v in sorted(comm_groups.items())}
+        json.dump(comm_groups, f, indent=2)
 
 
 if __name__ == "__main__":
@@ -205,62 +215,44 @@ if __name__ == "__main__":
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument(
-        "--dims",
-        type=lambda s: tuple(int(dim) for dim in s.split("x")),
-        default=(4, 4, 4),
-        help="Dimension size of an WxLxH Torus. Example: --dims 4x4x4",
-    )
-    parser.add_argument(
+        "-c",
         "--coll_size_mb",
         type=int,
         default=1,
         help="The base collective size in MB (default: 1).",
     )
     parser.add_argument(
+        "-J",
+        "--jobspec",
+        type=str,
+        default="",
+        help="Path to the job spec containing a list of jobs.",
+    )
+    parser.add_argument(
         "-o",
         "--output",
         type=str,
         default="trace",
-        help="The name of the output directory (default: 'trace').",
-    )
-    parser.add_argument(
-        "--comm_group_output",
-        type=str,
-        default="inputs",
-        help="Path for the comm_groups JSON output.",
-    )
-    parser.add_argument(
-        "--dummy_trace_list",
-        type=str,
-        default="",
-        help="Path to a list containing the node names of dummy traces.",
+        help="The top-level output directory (default: 'trace').",
     )
 
     args = parser.parse_args()
-    trace_path = args.output
-    if not os.path.exists(trace_path):
-        os.makedirs(trace_path)
+    output = Path(args.output)
+    output.mkdir(parents=True, exist_ok=True)
 
-    # Fast path to only generate a dummy trace file and exit.
-    if args.dummy_trace_list:
-        genSingleDummyTrace(args)
-        exit(0)
-
-    comm_group_path = args.comm_group_output
-    if not os.path.exists(comm_group_path):
-        os.makedirs(comm_group_path)
-
-    if len(args.dims) == 1:
-        generate = gen1d
-    elif len(args.dims) == 2:
-        generate = gen2d
-    elif len(args.dims) == 3:
-        generate = gen3d
-    else:
-        raise ValueError("Only 1D, 2D, and 3D traces are supported.")
-
-    comm_groups = generate(args)
-    # Dump comm_groups to JSON file
-    with open(os.path.join(comm_group_path, "comm_group.json"), "w") as f:
-        comm_groups = {k: v for k, v in sorted(comm_groups.items())}
-        json.dump(comm_groups, f, indent=2)
+    jobs = parse_jobspec(args.jobspec)
+    for name, shape in jobs.items():
+        if math.prod(shape) == 1:
+            genSingleDummyTrace(output, name)
+        else:
+            coll_size = args.coll_size_mb * BYTES_IN_MB
+            new_shape = []
+            for dim in shape:
+                if dim > 1:
+                    new_shape.append(dim)
+            if len(new_shape) == 1:
+                gen1d(output, name, shape, coll_size)
+            elif len(new_shape) == 2:
+                gen2d(output, name, tuple(new_shape), coll_size)
+            elif len(new_shape) == 3:
+                gen3d(output, name, shape, coll_size)
