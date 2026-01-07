@@ -18,10 +18,10 @@ TORUS_Y_SIZE=16
 TORUS_Z_SIZE=16
 BLOCK_DIMS="1x1x1"
 BW=50
-POLICY="firstfit"
+POLICY=${1:-"firstfit"}
 NCORE=$(( $(nproc) - 2 ))
 if [ "${NCORE}" -lt 1 ]; then NCORE=1; fi
-MAIN_JOBS="2x2x2"
+MAIN_JOBS=${2:-"2x2x2"}
 DUMMY=true
 
 # [Step 1] Prepare jobspec with main jobs and background jobs.
