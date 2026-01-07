@@ -21,20 +21,29 @@ BW=50
 POLICY="firstfit"
 NCORE=$(( $(nproc) - 2 ))
 if [ "${NCORE}" -lt 1 ]; then NCORE=1; fi
+MAIN_JOBS="2x2x2"
+DUMMY=true
 
 # [Step 1] Prepare jobspec with main jobs and background jobs.
 python ${TOOLS_PATH}/create_jobspec.py -D "${TORUS_X_SIZE}x${TORUS_Y_SIZE}x${TORUS_Z_SIZE}" \
-    -J "2x2x2" -o "${INPUT_PATH}/jobspec.txt" -b "2x2x1"
+    -J "${MAIN_JOBS}" -o "${INPUT_PATH}/jobspec.txt" -b "1x1x1"
 
 # [Step 2] Generate traces using STG (in parallel).
 cd ${STG_DIR}
-export STG_DIR TRACE_PATH
+export STG_DIR TRACE_PATH DUMMY
 parallel --jobs ${NCORE} --colsep ',' '
-    mkdir -p "${TRACE_PATH}/{1}"
-    python "${STG_DIR}/main.py" --output_dir "${TRACE_PATH}/{1}" --output_name "{1}" \
-        --model_type "dense" --dp "{2}" --tp "{3}" --pp "{4}" \
-        --weight_sharded 0 --chakra_schema_version "v0.0.4"
+    if [[ ${DUMMY} == true && "{2}" == "B" ]]; then
+        echo "{1} {2} should use tracegen_manual"
+    else
+        mkdir -p "${TRACE_PATH}/{1}"
+        python "${STG_DIR}/main.py" --output_dir "${TRACE_PATH}/{1}" --output_name "{1}" \
+            --model_type "dense" --dp "{3}" --tp "{4}" --pp "{5}" \
+            --weight_sharded 0 --chakra_schema_version "v0.0.4"
+    fi
 ' :::: "${INPUT_PATH}/jobspec.txt"
+# Handle background job generation.
+python ${TOOLS_PATH}/tracegen_manual.py -J "${INPUT_PATH}/jobspec.txt" \
+    -o "${TRACE_PATH}"
 
 # [Step 3] (only for topomatch) Build traffic matrices for the traces.
 cd ${SCRIPT_DIR}

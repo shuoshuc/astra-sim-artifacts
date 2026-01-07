@@ -32,7 +32,7 @@ def place_with_policy(torus_dims, jobs, policy, block_dims, traffic_dir):
     else:
         raise ValueError(f"Unknown placement policy: {policy}")
 
-    for name, shape in jobs.items():
+    for name, [shape, _] in jobs.items():
         mapping = policy_impl.allocate(name, shape)
         if not mapping:
             raise RuntimeError(
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     jobs = parse_jobspec(args.jobspec)
 
     # Validate that total job size does not exceed torus capacity
-    total_job_size = sum(prod(dims) for dims in jobs.values())
+    total_job_size = sum(prod(dims) for dims, _ in jobs.values())
     torus_size = prod(args.torus_dims)
     if total_job_size > torus_size:
         raise ValueError(

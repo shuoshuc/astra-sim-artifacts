@@ -2,17 +2,18 @@ import argparse
 from math import prod
 
 
-def create_jobspec(args, bg_shape):
-    job_list = [] + args.jobs
+def create_jobspec(args):
+    # Tag all the main jobs with a label 'M', and later background jobs with 'B'.
+    job_list = [[shape, 'M'] for shape in args.jobs]
     total_nodes = prod(args.torus_dims)
-    assigned_nodes = sum(prod(shape) for shape in job_list)
+    assigned_nodes = sum(prod(shape) for shape, _ in job_list)
     if assigned_nodes > total_nodes:
         raise RuntimeError(
             f"Total job nodes ({assigned_nodes}) exceed torus capacity ({total_nodes})."
         )
     while total_nodes > assigned_nodes:
-        job_list.append(bg_shape)
-        assigned_nodes += prod(bg_shape)
+        job_list.append([args.bg_shape, 'B'])
+        assigned_nodes += prod(args.bg_shape)
     if assigned_nodes != total_nodes:
         raise RuntimeError(
             f"Total job nodes ({assigned_nodes}) do not fully use capacity ({total_nodes})."
@@ -20,14 +21,14 @@ def create_jobspec(args, bg_shape):
 
     # Write jobspec to file.
     with open(args.output, "w") as f:
-        for i, shape in enumerate(job_list):
+        for i, [shape, label] in enumerate(job_list):
             dims = ",".join(map(str, shape))
-            f.write(f"J{i},{dims}\n")
+            f.write(f"J{i},{label},{dims}\n")
 
 
 def parse_jobspec(file_path):
     """
-    Parses a jobspec file (CSV: Name,D,T,P) and returns a dictionary mapping job names to shapes.
+    Parses a jobspec file (CSV: Name,label,D,T,P) and returns a mapping of job names to shapes.
     """
     jobs = {}
     with open(file_path, "r") as f:
@@ -36,11 +37,12 @@ def parse_jobspec(file_path):
             if not line or line.startswith("#"):
                 continue
             parts = line.split(",")
-            if len(parts) != 4:
+            if len(parts) != 5:
                 raise RuntimeError(f"Incorrect number of columns: {line}")
             name = parts[0]
-            dims = tuple(int(x) for x in parts[1:4])
-            jobs[name] = dims
+            label = parts[1]
+            dims = tuple(int(x) for x in parts[2:5])
+            jobs[name] = [dims, label]
     return jobs
 
 
@@ -80,4 +82,4 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output", default="jobspec.txt", help="Output file path.")
 
     args = parser.parse_args()
-    create_jobspec(args, args.bg_shape)
+    create_jobspec(args)
