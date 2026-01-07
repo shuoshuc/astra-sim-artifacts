@@ -46,11 +46,13 @@ python ${TOOLS_PATH}/tracegen_manual.py -J "${INPUT_PATH}/jobspec.txt" \
     -o "${TRACE_PATH}"
 
 # [Step 3] (only for topomatch) Build traffic matrices for the traces.
-cd ${SCRIPT_DIR}
-export TOOLS_PATH TRACE_PATH
-parallel --jobs ${NCORE} --colsep ',' '
-    python ${TOOLS_PATH}/topomatch_prep.py -f "${TRACE_PATH}/{1}" -m "${TRACE_PATH}/{1}/traffic.mat"
-' :::: "${INPUT_PATH}/jobspec.txt"
+if [[ ${POLICY} == "topomatch" ]]; then
+    cd ${SCRIPT_DIR}
+    export TOOLS_PATH TRACE_PATH
+    parallel --jobs ${NCORE} --colsep ',' '
+        python ${TOOLS_PATH}/topomatch_prep.py -f "${TRACE_PATH}/{1}" -m "${TRACE_PATH}/{1}/traffic.mat"
+    ' :::: "${INPUT_PATH}/jobspec.txt"
+fi
 
 # [Step 4] Generate placement for multi-tenant scenarios.
 python ${TOOLS_PATH}/place.py -D "${TORUS_X_SIZE}x${TORUS_Y_SIZE}x${TORUS_Z_SIZE}" \
