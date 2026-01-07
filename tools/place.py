@@ -2,26 +2,14 @@ import argparse
 import json
 from natsort import natsorted
 from math import prod
-from placement_lib import FirstFit, SpaceFillingCurve, L1Clustering, BlockRandom, TopoMatch
-
-
-def parse_jobspec(file_path):
-    """
-    Parses a jobspec file (CSV: Name,D,T,P) and returns a dictionary mapping job names to shapes.
-    """
-    jobs = {}
-    with open(file_path, "r") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            parts = line.split(",")
-            if len(parts) != 4:
-                raise RuntimeError(f"Incorrect number of columns: {line}")
-            name = parts[0]
-            dims = tuple(int(x) for x in parts[1:4])
-            jobs[name] = dims
-    return jobs
+from create_jobspec import parse_jobspec
+from placement_lib import (
+    FirstFit,
+    SpaceFillingCurve,
+    L1Clustering,
+    BlockRandom,
+    TopoMatch,
+)
 
 
 def place_with_policy(torus_dims, jobs, policy, block_dims, traffic_dir):
@@ -112,6 +100,8 @@ if __name__ == "__main__":
             f"Error: Total job nodes ({total_job_size}) exceed torus capacity ({torus_size})."
         )
 
-    placement = place_with_policy(args.torus_dims, jobs, args.policy, args.block_dims, args.traffic_dir)
+    placement = place_with_policy(
+        args.torus_dims, jobs, args.policy, args.block_dims, args.traffic_dir
+    )
     # print(f"Final Placement:\n{placement}")
     dump(placement, args.output)

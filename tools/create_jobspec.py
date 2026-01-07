@@ -25,6 +25,25 @@ def create_jobspec(args, bg_shape):
             f.write(f"J{i},{dims}\n")
 
 
+def parse_jobspec(file_path):
+    """
+    Parses a jobspec file (CSV: Name,D,T,P) and returns a dictionary mapping job names to shapes.
+    """
+    jobs = {}
+    with open(file_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split(",")
+            if len(parts) != 4:
+                raise RuntimeError(f"Incorrect number of columns: {line}")
+            name = parts[0]
+            dims = tuple(int(x) for x in parts[1:4])
+            jobs[name] = dims
+    return jobs
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate jobspec.")
     parser.add_argument(
