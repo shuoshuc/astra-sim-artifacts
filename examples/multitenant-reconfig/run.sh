@@ -13,11 +13,11 @@ TRACE_PATH=${SCRIPT_DIR}/trace
 INPUT_PATH=${SCRIPT_DIR}/inputs
 
 # Configurations
-TORUS_X_SIZE=16
-TORUS_Y_SIZE=16
-TORUS_Z_SIZE=16
+TORUS_X_SIZE=${3:-16}
+TORUS_Y_SIZE=${4:-16}
+TORUS_Z_SIZE=${5:-16}
 BLOCK_DIMS="1x1x1"
-BW=50
+BW=${6:-50}  # in Gbps
 POLICY=${1:-"firstfit"}
 NCORE=$(( $(nproc) - 2 ))
 if [ "${NCORE}" -lt 1 ]; then NCORE=1; fi
