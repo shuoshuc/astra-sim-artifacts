@@ -250,6 +250,7 @@ class BlockRandom:
     """
 
     def __init__(self, W, L, H, BX, BY, BZ):
+        random.seed(42)
         self.W, self.L, self.H = W, L, H
         self.BX, self.BY, self.BZ = BX, BY, BZ
 
