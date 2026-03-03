@@ -1,0 +1,1 @@
+1.  ./run.sh random 2x2x1 4 4 1 50

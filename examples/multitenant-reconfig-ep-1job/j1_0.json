@@ -1,0 +1,22 @@
+{
+  "version": "0.0.4"
+}{
+  "id": "1",
+  "name": "DummyNode",
+  "type": "COMP_NODE",
+  "durationMicros": "1",
+  "attr": [
+    {
+      "name": "is_cpu_op",
+      "boolVal": false
+    },
+    {
+      "name": "num_ops",
+      "int64Val": "1"
+    },
+    {
+      "name": "tensor_size",
+      "int64Val": "1"
+    }
+  ]
+}
