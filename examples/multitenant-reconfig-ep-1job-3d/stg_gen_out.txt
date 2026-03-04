@@ -1,0 +1,129 @@
+Assembling dense model
+transformer.0._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.1._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.2._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.3._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.4._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.5._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.6._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.7._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.8._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.9._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.10._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.11._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.12._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.13._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.14._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.15._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.16._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.17._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.18._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.19._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.20._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.21._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.22._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.23._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.24._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.25._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.26._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.27._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.28._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.29._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.30._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.31._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.32._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.33._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.34._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.35._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.36._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.37._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.38._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.39._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.40._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.41._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.42._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.43._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.44._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.45._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.46._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.47._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.48._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.49._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.50._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.51._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.52._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.53._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.54._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.55._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.56._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.57._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.58._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.59._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.60._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.61._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.62._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.63._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.64._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.65._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.66._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.67._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.68._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.69._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.70._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.71._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.72._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.73._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.74._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.75._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.76._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.77._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.78._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+transformer.79._sharded_weight: [2*Dff*Dmodel/tp + 4*Dmodel**2/tp] @ [1]
+in_emb.w: [Dvocal, Dmodel] @ [MicroBatch/dp, Seq/(cp*tp)]
+out_emb.w: [Dmodel, Dvocal] @ [MicroBatch/dp, Seq/(cp*tp)]
+Dense model: Distributing
+optimize: spatial copying ((pp, 0),) to ((pp, 0), (cp, 0))
+optimize: spatial copying ((pp, 1),) to ((pp, 1), (cp, 0))
+optimize: spatial copying ((pp, 0), (cp, 0)) to ((pp, 0), (cp, 0), (tp, 0))
+optimize: spatial copying ((pp, 0), (cp, 0)) to ((pp, 0), (cp, 0), (tp, 1))
+optimize: spatial copying ((pp, 0), (cp, 0)) to ((pp, 0), (cp, 0), (tp, 2))
+optimize: spatial copying ((pp, 0), (cp, 0)) to ((pp, 0), (cp, 0), (tp, 3))
+optimize: spatial copying ((pp, 1), (cp, 0)) to ((pp, 1), (cp, 0), (tp, 0))
+optimize: spatial copying ((pp, 1), (cp, 0)) to ((pp, 1), (cp, 0), (tp, 1))
+optimize: spatial copying ((pp, 1), (cp, 0)) to ((pp, 1), (cp, 0), (tp, 2))
+optimize: spatial copying ((pp, 1), (cp, 0)) to ((pp, 1), (cp, 0), (tp, 3))
+optimize: spatial copying ((pp, 0), (cp, 0), (tp, 0)) to ((pp, 0), (cp, 0), (tp, 0), (dp, 0))
+optimize: spatial copying ((pp, 0), (cp, 0), (tp, 1)) to ((pp, 0), (cp, 0), (tp, 1), (dp, 0))
+optimize: spatial copying ((pp, 0), (cp, 0), (tp, 2)) to ((pp, 0), (cp, 0), (tp, 2), (dp, 0))
+optimize: spatial copying ((pp, 0), (cp, 0), (tp, 3)) to ((pp, 0), (cp, 0), (tp, 3), (dp, 0))
+optimize: spatial copying ((pp, 1), (cp, 0), (tp, 0)) to ((pp, 1), (cp, 0), (tp, 0), (dp, 0))
+optimize: spatial copying ((pp, 1), (cp, 0), (tp, 1)) to ((pp, 1), (cp, 0), (tp, 1), (dp, 0))
+optimize: spatial copying ((pp, 1), (cp, 0), (tp, 2)) to ((pp, 1), (cp, 0), (tp, 2), (dp, 0))
+optimize: spatial copying ((pp, 1), (cp, 0), (tp, 3)) to ((pp, 1), (cp, 0), (tp, 3), (dp, 0))
+Dense model: Converting Chakra
+processing zero rank before cross bucket ((pp, 0), (cp, 0), (tp, 0), (dp, 0))
+processing zero rank before cross bucket ((pp, 1), (cp, 0), (tp, 0), (dp, 0))
+copying from ((pp, 0), (cp, 0), (tp, 0), (dp, 0)) to ((pp, 0), (cp, 0), (tp, 1), (dp, 0)) before cross bucket
+copying from ((pp, 0), (cp, 0), (tp, 0), (dp, 0)) to ((pp, 0), (cp, 0), (tp, 2), (dp, 0)) before cross bucket
+copying from ((pp, 0), (cp, 0), (tp, 0), (dp, 0)) to ((pp, 0), (cp, 0), (tp, 3), (dp, 0)) before cross bucket
+copying from ((pp, 1), (cp, 0), (tp, 0), (dp, 0)) to ((pp, 1), (cp, 0), (tp, 1), (dp, 0)) before cross bucket
+copying from ((pp, 1), (cp, 0), (tp, 0), (dp, 0)) to ((pp, 1), (cp, 0), (tp, 2), (dp, 0)) before cross bucket
+copying from ((pp, 1), (cp, 0), (tp, 0), (dp, 0)) to ((pp, 1), (cp, 0), (tp, 3), (dp, 0)) before cross bucket
+processing zero rank after cross bucket((pp, 0), (cp, 0), (tp, 0), (dp, 0))
+empty_comp_nodes: 1884
+empty_comp_nodes: 520
+empty_comp_nodes: 320
+processing zero rank after cross bucket((pp, 1), (cp, 0), (tp, 0), (dp, 0))
+empty_comp_nodes: 1885
+empty_comp_nodes: 520
+empty_comp_nodes: 320
+copying from ((pp, 0), (cp, 0), (tp, 0), (dp, 0)) to ((pp, 0), (cp, 0), (tp, 0), (dp, 0)) after cross bucket
+copying from ((pp, 0), (cp, 0), (tp, 0), (dp, 0)) to ((pp, 0), (cp, 0), (tp, 1), (dp, 0)) after cross bucket
+copying from ((pp, 0), (cp, 0), (tp, 0), (dp, 0)) to ((pp, 0), (cp, 0), (tp, 2), (dp, 0)) after cross bucket
+copying from ((pp, 0), (cp, 0), (tp, 0), (dp, 0)) to ((pp, 0), (cp, 0), (tp, 3), (dp, 0)) after cross bucket
+copying from ((pp, 1), (cp, 0), (tp, 0), (dp, 0)) to ((pp, 1), (cp, 0), (tp, 0), (dp, 0)) after cross bucket
+copying from ((pp, 1), (cp, 0), (tp, 0), (dp, 0)) to ((pp, 1), (cp, 0), (tp, 1), (dp, 0)) after cross bucket
+copying from ((pp, 1), (cp, 0), (tp, 0), (dp, 0)) to ((pp, 1), (cp, 0), (tp, 2), (dp, 0)) after cross bucket
+copying from ((pp, 1), (cp, 0), (tp, 0), (dp, 0)) to ((pp, 1), (cp, 0), (tp, 3), (dp, 0)) after cross bucket
+Dense model: reading out
+reading out: 100%|██████████| 8/8 [00:00<00:00, 31.26it/s]
