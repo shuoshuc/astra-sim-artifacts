@@ -79,7 +79,8 @@ ${ASTRA_SIM} \
     --system-configuration=${INPUT_PATH}/sys.json \
     --network-configuration=${INPUT_PATH}/network.yml \
     --remote-memory-configuration=${INPUT_PATH}/RemoteMemory.json \
-    --circuit-schedules=${INPUT_PATH}/schedule.txt
+    --circuit-schedules=${INPUT_PATH}/schedule.txt \
+    --npus-per-dim=${TORUS_X_SIZE},${TORUS_Y_SIZE},${TORUS_Z_SIZE}
 )
 
 # [Step 8] Extract JCT into a csv file.
