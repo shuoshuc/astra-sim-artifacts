@@ -22,11 +22,12 @@ POLICY=${1:-"firstfit"}
 NCORE=$(( $(nproc) - 2 ))
 if [ "${NCORE}" -lt 1 ]; then NCORE=1; fi
 MAIN_JOBS=${2:-"2x2x2"}
-DUMMY=true
+BG_JOBS=${7:-"1x1x1"}
+DUMMY=${8:-true}
 
 # [Step 1] Prepare jobspec with main jobs and background jobs.
 python ${TOOLS_PATH}/create_jobspec.py -D "${TORUS_X_SIZE}x${TORUS_Y_SIZE}x${TORUS_Z_SIZE}" \
-    -J "${MAIN_JOBS}" -o "${INPUT_PATH}/jobspec.txt" -b "1x1x1"
+    -J "${MAIN_JOBS}" -o "${INPUT_PATH}/jobspec.txt" -b "${BG_JOBS}"
 
 # [Step 2] Generate traces using STG (in parallel).
 cd ${STG_DIR}
@@ -38,12 +39,16 @@ parallel --jobs ${NCORE} --colsep ',' '
         mkdir -p "${TRACE_PATH}/{1}"
         python "${STG_DIR}/main.py" --output_dir "${TRACE_PATH}/{1}" --output_name "{1}" \
             --model_type "dense" --dp "{3}" --tp "{4}" --pp "{5}" \
+            --dmodel 32768 --dff 114688 --batch 128 --seq 2048 --dvocal 128000 \
+            --head 128 --kvhead 16 --num_stacks 96 \
             --weight_sharded 0 --chakra_schema_version "v0.0.4"
     fi
 ' :::: "${INPUT_PATH}/jobspec.txt"
 # Handle background job generation.
-python ${TOOLS_PATH}/tracegen_manual.py -J "${INPUT_PATH}/jobspec.txt" \
-    -o "${TRACE_PATH}"
+if [[ ${DUMMY} == true ]]; then
+    python ${TOOLS_PATH}/tracegen_manual.py -J "${INPUT_PATH}/jobspec.txt" \
+        -o "${TRACE_PATH}"
+fi
 
 # [Step 3] (only for topomatch) Build traffic matrices for the traces.
 if [[ ${POLICY} == "topomatch" ]]; then
