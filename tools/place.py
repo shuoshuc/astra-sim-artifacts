@@ -9,10 +9,11 @@ from placement_lib import (
     L1Clustering,
     BlockRandom,
     TopoMatch,
+    Contention,
 )
 
 
-def place_with_policy(torus_dims, jobs, policy, block_dims, traffic_dir):
+def place_with_policy(torus_dims, jobs, policy, block_dims, traffic_dir, contention_input=None):
     """
     Generate job placement with a policy.
     """
@@ -29,6 +30,12 @@ def place_with_policy(torus_dims, jobs, policy, block_dims, traffic_dir):
         policy_impl = BlockRandom(W, L, H, *block_dims)
     elif policy == "topomatch":
         policy_impl = TopoMatch(W, L, H, traffic_dir)
+    elif policy == "contention":
+        if not contention_input:
+            raise ValueError(
+                "Policy 'contention' requires --contention_input <file.json>."
+            )
+        policy_impl = Contention(W, L, H, contention_input)
     else:
         raise ValueError(f"Unknown placement policy: {policy}")
 
@@ -87,6 +94,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "-P", "--policy", default="firstfit", help="Placement policy to use."
     )
+    parser.add_argument(
+        "-C",
+        "--contention_input",
+        type=str,
+        help="Path to a JSON file with explicit [x,y,z] placements per job "
+             "(required when -P contention is used).",
+    )
 
     args = parser.parse_args()
     # Parse jobspec and construct jobs.
@@ -101,7 +115,8 @@ if __name__ == "__main__":
         )
 
     placement = place_with_policy(
-        args.torus_dims, jobs, args.policy, args.block_dims, args.traffic_dir
+        args.torus_dims, jobs, args.policy, args.block_dims, args.traffic_dir,
+        args.contention_input,
     )
     # print(f"Final Placement:\n{placement}")
     dump(placement, args.output)

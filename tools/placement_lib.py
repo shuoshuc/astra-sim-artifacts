@@ -322,6 +322,91 @@ class BlockRandom:
         return mapping
 
 
+class Contention:
+    """
+    Manual contention placement policy.
+
+    Reads explicit torus node coordinates for every job from a JSON file
+    supplied via the --contention_input argument of place.py.  The file
+    format is:
+
+        {
+            "J0": [[1,1,0], [2,1,0], [1,2,0], [2,2,0]],
+            "J1": [[0,1,0], [3,1,0], [1,0,0], [2,0,0]],
+            "J2": [[0,0,0]],
+            ...
+        }
+
+    Keys are job names (case-insensitive match).  Values are ordered lists of
+    [x, y, z] coordinates; the i-th entry maps job-internal node i to that
+    torus coordinate.  The list length must equal the job's total node count
+    (A*B*C).
+    """
+
+    def __init__(self, W, L, H, input_file):
+        import json
+        self.W, self.L, self.H = W, L, H
+        self.grid = np.zeros((W, L, H), dtype=int)
+        with open(input_file) as f:
+            raw = json.load(f)
+        # Normalise keys to upper-case for case-insensitive lookup.
+        self._table = {k.upper(): [tuple(c) for c in v] for k, v in raw.items()}
+
+    def _first_free(self, k):
+        """Return the first k free torus linear indices in scan order."""
+        selected = []
+        for z in range(self.H):
+            for y in range(self.L):
+                for x in range(self.W):
+                    if self.grid[x, y, z] == 0:
+                        selected.append(
+                            coord_to_linear_index(x, y, z, (self.W, self.L, self.H))
+                        )
+                        if len(selected) == k:
+                            return selected
+        return None
+
+    def allocate(self, name, shape):
+        """
+        If the job is listed in the input file, place it at the specified
+        [x,y,z] coordinates.  Otherwise fall back to first-fit on the
+        remaining free nodes (used for dummy / background jobs).
+        Raises ValueError on size mismatch or node conflicts.
+        """
+        A, B, C = shape
+        k = A * B * C
+        key = name.upper()
+
+        if key in self._table:
+            coords = self._table[key]
+            if len(coords) != k:
+                raise ValueError(
+                    f"[contention] Job '{name}' expects {k} nodes "
+                    f"but input provides {len(coords)}."
+                )
+            mapping = {}
+            for job_idx, (x, y, z) in enumerate(coords):
+                if self.grid[x, y, z] != 0:
+                    raise ValueError(
+                        f"[contention] Job '{name}': torus node ({x},{y},{z}) "
+                        f"is already occupied."
+                    )
+                self.grid[x, y, z] = 1
+                mapping[job_idx] = coord_to_linear_index(x, y, z, (self.W, self.L, self.H))
+            return mapping
+
+        # Job not in input file → first-fit on remaining free nodes.
+        selected = self._first_free(k)
+        if selected is None:
+            return None
+        mapping = {}
+        for job_idx, torus_idx in enumerate(selected):
+            x, y, z = linear_index_to_coord(torus_idx, (self.W, self.L, self.H))
+            self.grid[x, y, z] = 1
+            mapping[job_idx] = torus_idx
+        return mapping
+
+
 class TopoMatch:
     """
     TopoMatch placement policy.
