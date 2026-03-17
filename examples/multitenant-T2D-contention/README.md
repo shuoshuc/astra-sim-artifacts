@@ -1,9 +1,7 @@
 1.  ./run.sh firstfit 2x2x1,2x2x1 4 4 1 50
 
 # test
-2. ./run.sh contention 2x2x1,2x2x1 4 4 1 50
-
-./run.sh contention 2x2x1,2x2x1 10 10 1 50
+2. ./run.sh contention 2x2x1,2x2x1 10 10 1 50
 
 contention_placement.json value:
 ```
