@@ -24,4 +24,4 @@ sudo docker run --ipc=host \
         ${DUMMY}"
 mv $(pwd)/examples/multitenant-reconfig/jct.csv output
 cd $(pwd)/examples/multitenant-reconfig
-sudo rm -r tmp log trace inputs/jobspec.txt inputs/placement.json inputs/schedule.txt
+sudo rm -r log trace inputs/jobspec.txt inputs/placement.json inputs/schedule.txt
