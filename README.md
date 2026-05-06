@@ -6,6 +6,17 @@ Run this command to build a docker container with astra-sim and its dependencies
 docker build -t astra .
 ```
 
+## Choosing the astra-sim source
+
+The `Dockerfile` accepts an `ASTRA_SRC` build arg that controls where `astra-sim-hybrid-parallelism` comes from:
+
+- `ASTRA_SRC=git` (default): clone the upstream repo from GitHub and check out the `multitenant` branch. Use this for clean, reproducible builds.
+- `ASTRA_SRC=local`: copy the working copy under `./astra-sim-hybrid-parallelism` from the build context, including any uncommitted changes. Use this when iterating on simulator code locally. Submodules are still init'd inside the image, so a forgotten local `git submodule update --init --recursive` won't silently produce a broken image.
+
+```bash
+docker build --build-arg ASTRA_SRC=local -t astra .
+```
+
 # Run an example experiment
 Next, you can start the docker container and run an experiment.
 The easiest way is to invoke `./start.sh`, which will run a multitenant experiment automatically and export the outputs to `./output/`.

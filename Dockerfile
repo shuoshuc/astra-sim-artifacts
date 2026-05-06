@@ -1,3 +1,36 @@
+# Source of astra-sim-hybrid-parallelism:
+#   ASTRA_SRC=git    (default) clone from GitHub at build time.
+#   ASTRA_SRC=local  copy the working copy under ./astra-sim-hybrid-parallelism
+#                    (including uncommitted changes) from the build context.
+# Build with:  docker build --build-arg ASTRA_SRC=local -t astra .
+ARG ASTRA_SRC=git
+
+
+### ============= Source Fetch Stages =====================
+## Fetch from upstream GitHub.
+FROM ubuntu:22.04 AS source-git
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt -y update && apt -y install -y git
+RUN git clone https://github.com/EricDinging/astra-sim-hybrid-parallelism.git /astra-sim-src
+WORKDIR /astra-sim-src
+RUN git checkout multitenant
+RUN git submodule update --init --recursive
+
+## Use the local working copy from the build context. Submodules are
+## still init/updated to the recorded SHA so a missing submodule on the
+## host does not silently produce a broken image.
+FROM ubuntu:22.04 AS source-local
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt -y update && apt -y install -y git
+COPY astra-sim-hybrid-parallelism /astra-sim-src
+WORKDIR /astra-sim-src
+RUN git submodule update --init --recursive
+
+## Resolve which source stage to use based on ASTRA_SRC.
+FROM source-${ASTRA_SRC} AS astra-source
+### ======================================================
+
+
 ## Use Ubuntu
 FROM ubuntu:22.04
 
@@ -67,11 +100,7 @@ ENV PROTOBUF_FROM_SOURCE="True"
 
 ### ============= Get source code ==================
 WORKDIR /app
-RUN git clone https://github.com/EricDinging/astra-sim-hybrid-parallelism.git astra-sim
-WORKDIR /app/astra-sim
-RUN git checkout multitenant
-RUN git submodule update --init --recursive
-WORKDIR /app
+COPY --from=astra-source /astra-sim-src /app/astra-sim
 RUN ln -s astra-sim/extern/graph_frontend/chakra .
 RUN git clone https://github.com/meta-pytorch/chakra_replay.git
 ### ======================================================
