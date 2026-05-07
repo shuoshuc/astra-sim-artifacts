@@ -21,7 +21,7 @@ from itertools import product
 import numpy as np
 
 
-def generate_schedule(bw, lt, X, Y, Z):
+def generate_schedule(bw: float, lt: float, X: int, Y: int, Z: int) -> tuple[list[list[float]], list[list[float]]]:
     """Return (bw_matrix, lt_matrix) as nested Python lists.
 
     1D linearization is X-fastest:
@@ -51,11 +51,11 @@ def generate_schedule(bw, lt, X, Y, Z):
     return bw_matrix.tolist(), lt_matrix.tolist()
 
 
-def write_matrix(path, matrix, tag, topo_id=0):
+def write_matrix(path: str, matrix: list[list[float]], tag: str, topo_id: int = 0) -> None:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
-    with p.open("w", newline="") as f:
-        writer = csv.writer(f, delimiter=" ")
+    with p.open("w") as f:
+        writer = csv.writer(f, delimiter=" ", lineterminator="\n")
         writer.writerow([tag, topo_id])
         for row in matrix:
             writer.writerow(row)
