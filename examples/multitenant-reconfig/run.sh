@@ -85,6 +85,10 @@ sed -i "s/latency: \[ .* \]/latency: [ ${LT} ]/" ${INPUT_PATH}/network.yml
 # [Step 7] Run ASTRA-sim
 # NOTE: --circuit-schedules was split into --bw-schedule (required) and
 #       --latency-schedule (optional, falls back to network.yml's scalar latency).
+# Raise the open-file limit: each Sys keeps trace.{rank}.et open for the run's
+# lifetime, so a 16x16x16 torus needs ~4100 FDs and the default soft limit of
+# 1024 causes the simulator to abort with a JSON parse error mid-construction.
+ulimit -n 65536
 (
 ${ASTRA_SIM} \
     --workload-configuration=${TRACE_PATH}/merged/trace \

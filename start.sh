@@ -10,7 +10,7 @@ BG_JOBS=${7:-"1x1x1"}
 DUMMY=${8:-true}
 
 mkdir -p output
-sudo docker run --ipc=host \
+sudo docker run --ipc=host --ulimit nofile=65536:65536 \
     -v $(pwd)/examples:/app/examples \
     -v $(pwd)/tools:/app/tools \
     astra /bin/bash -c "/app/examples/multitenant-reconfig/run.sh \
