@@ -22,7 +22,22 @@ RUN git submodule update --init --recursive
 FROM ubuntu:22.04 AS source-local
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt -y update && apt -y install -y git
-COPY astra-sim-hybrid-parallelism /astra-sim-src
+# Bind-mount the build context (read-only) so we can detect a missing
+# ./astra-sim-hybrid-parallelism and emit a clearer error than a bare
+# COPY failure. cp -a preserves the embedded .git so submodules can init.
+RUN --mount=type=bind,target=/host,ro=true \
+    if [ ! -d /host/astra-sim-hybrid-parallelism ]; then \
+        echo "" && \
+        echo "ERROR: ASTRA_SRC=local was specified but ./astra-sim-hybrid-parallelism" && \
+        echo "       is not present in the build context." && \
+        echo "" && \
+        echo "       Either clone it next to this Dockerfile:" && \
+        echo "         git clone -b multitenant https://github.com/EricDinging/astra-sim-hybrid-parallelism.git" && \
+        echo "       Or rebuild with --build-arg ASTRA_SRC=git to fetch from upstream." && \
+        echo "" && \
+        exit 1; \
+    fi && \
+    cp -a /host/astra-sim-hybrid-parallelism /astra-sim-src
 WORKDIR /astra-sim-src
 RUN git submodule update --init --recursive
 

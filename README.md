@@ -10,12 +10,17 @@ docker build -t astra .
 
 The `Dockerfile` accepts an `ASTRA_SRC` build arg that controls where `astra-sim-hybrid-parallelism` comes from:
 
-- `ASTRA_SRC=git` (default): clone the upstream repo from GitHub and check out the `multitenant` branch. Use this for clean, reproducible builds.
-- `ASTRA_SRC=local`: copy the working copy under `./astra-sim-hybrid-parallelism` from the build context, including any uncommitted changes. Use this when iterating on simulator code locally. Submodules are still init'd inside the image, so a forgotten local `git submodule update --init --recursive` won't silently produce a broken image.
+- `ASTRA_SRC=git` (default): clone the upstream repo from GitHub and check out the `multitenant` branch. Use this for clean, reproducible builds. The local `./astra-sim-hybrid-parallelism` folder is not required and is ignored if present.
 
-```bash
-docker build --build-arg ASTRA_SRC=local -t astra .
-```
+  ```bash
+  docker build -t astra .
+  ```
+
+- `ASTRA_SRC=local`: copy the working copy under `./astra-sim-hybrid-parallelism` from the build context, including any uncommitted changes. Use this when iterating on simulator code locally. The directory must exist next to the `Dockerfile` — the build aborts with a clear error otherwise. Submodules are still init'd inside the image, so a forgotten local `git submodule update --init --recursive` won't silently produce a broken image.
+
+  ```bash
+  docker build --build-arg ASTRA_SRC=local -t astra .
+  ```
 
 # Run an example experiment
 Next, you can start the docker container and run an experiment.
