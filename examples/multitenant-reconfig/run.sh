@@ -17,7 +17,7 @@ TORUS_X_SIZE=${3:-16}
 TORUS_Y_SIZE=${4:-16}
 TORUS_Z_SIZE=${5:-16}
 BLOCK_DIMS="1x1x1"
-BW=${6:-50}  # in Gbps
+BW=${6:-50}  # in GB/s
 POLICY=${1:-"firstfit"}
 NCORE=$(( $(nproc) - 2 ))
 if [ "${NCORE}" -lt 1 ]; then NCORE=1; fi
@@ -80,6 +80,7 @@ python ${TOOLS_PATH}/gen_schedule.py \
     --latency-output ${INPUT_PATH}/latency_schedule.txt
 sed -i "s/npus_count: \[ .* \]/npus_count: [ ${NPUS} ]/" ${INPUT_PATH}/network.yml
 sed -i "s/bandwidth: \[ .* \]/bandwidth: [ ${BW} ]/" ${INPUT_PATH}/network.yml
+sed -i "s/latency: \[ .* \]/latency: [ ${LT} ]/" ${INPUT_PATH}/network.yml
 
 # [Step 7] Run ASTRA-sim
 (
