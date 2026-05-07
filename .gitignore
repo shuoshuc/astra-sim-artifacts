@@ -3,6 +3,7 @@ CLAUDE.md
 CLAUDE.local.md
 .claude/
 .claude-*/
+docs/superpowers/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
