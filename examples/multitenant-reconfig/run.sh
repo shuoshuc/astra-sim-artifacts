@@ -83,6 +83,8 @@ sed -i "s/bandwidth: \[ .* \]/bandwidth: [ ${BW} ]/" ${INPUT_PATH}/network.yml
 sed -i "s/latency: \[ .* \]/latency: [ ${LT} ]/" ${INPUT_PATH}/network.yml
 
 # [Step 7] Run ASTRA-sim
+# NOTE: --circuit-schedules was split into --bw-schedule (required) and
+#       --latency-schedule (optional, falls back to network.yml's scalar latency).
 (
 ${ASTRA_SIM} \
     --workload-configuration=${TRACE_PATH}/merged/trace \
