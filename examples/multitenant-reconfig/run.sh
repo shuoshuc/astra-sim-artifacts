@@ -24,6 +24,7 @@ if [ "${NCORE}" -lt 1 ]; then NCORE=1; fi
 MAIN_JOBS=${2:-"2x2x2"}
 BG_JOBS=${7:-"1x1x1"}
 DUMMY=${8:-true}
+LT=${9:-500}  # Link latency in ns (default 500 ns to match network.yml).
 
 # [Step 1] Prepare jobspec with main jobs and background jobs.
 python ${TOOLS_PATH}/create_jobspec.py -D "${TORUS_X_SIZE}x${TORUS_Y_SIZE}x${TORUS_Z_SIZE}" \
@@ -72,7 +73,11 @@ python ${TOOLS_PATH}/merge_trace.py -i ${TRACE_PATH} --traces ${TRACES} -o ${TRA
 
 # [Step 6] Generate BW matrix for torus. Update bandwidth (bw) and npu count in the network config.
 NPUS=$((TORUS_X_SIZE * TORUS_Y_SIZE * TORUS_Z_SIZE))
-python ${TOOLS_PATH}/gen_bw_matrix.py -x ${TORUS_X_SIZE} -y ${TORUS_Y_SIZE} -z ${TORUS_Z_SIZE} -bw ${BW} -o ${INPUT_PATH}/schedule.txt
+python ${TOOLS_PATH}/gen_schedule.py \
+    -x ${TORUS_X_SIZE} -y ${TORUS_Y_SIZE} -z ${TORUS_Z_SIZE} \
+    -bw ${BW} -lt ${LT} \
+    --bw-output ${INPUT_PATH}/bw_schedule.txt \
+    --latency-output ${INPUT_PATH}/latency_schedule.txt
 sed -i "s/npus_count: \[ .* \]/npus_count: [ ${NPUS} ]/" ${INPUT_PATH}/network.yml
 sed -i "s/bandwidth: \[ .* \]/bandwidth: [ ${BW} ]/" ${INPUT_PATH}/network.yml
 
@@ -84,7 +89,8 @@ ${ASTRA_SIM} \
     --system-configuration=${INPUT_PATH}/sys.json \
     --network-configuration=${INPUT_PATH}/network.yml \
     --remote-memory-configuration=${INPUT_PATH}/RemoteMemory.json \
-    --circuit-schedules=${INPUT_PATH}/schedule.txt \
+    --bw-schedule=${INPUT_PATH}/bw_schedule.txt \
+    --latency-schedule=${INPUT_PATH}/latency_schedule.txt \
     --npus-per-dim=${TORUS_X_SIZE},${TORUS_Y_SIZE},${TORUS_Z_SIZE}
 )
 
