@@ -42,6 +42,17 @@ env/
 *.log
 *.bak
 
+# Experiment-specific runtime artifacts
+examples/*/trace/
+examples/*/log/
+examples/*/jct.csv
+examples/*/inputs/jobspec.txt
+# bw_schedule/latency_schedule are runtime artifacts in most experiments,
+# but fluid-model commits them as static fluid-model parameters.
+# Ignored everywhere except where explicitly tracked (gitignore does not affect tracked files).
+examples/multitenant-reconfig/inputs/bw_schedule.txt
+examples/multitenant-reconfig/inputs/latency_schedule.txt
+
 # Executables (if not intended for version control)
 *.sh.exe
 a.out
