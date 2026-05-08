@@ -1,12 +1,14 @@
+# syntax=docker/dockerfile:1
 # Source of astra-sim-hybrid-parallelism:
 #   ASTRA_SRC=git    (default) clone from GitHub at build time. The local
 #                    ./astra-sim-hybrid-parallelism folder is not required
 #                    and is ignored if present.
 #   ASTRA_SRC=local  copy the working copy under ./astra-sim-hybrid-parallelism
 #                    (including uncommitted changes) from the build context.
-# Build with:  docker build --build-arg ASTRA_SRC=local -t astra .
+# Build with:  docker buildx build --build-arg ASTRA_SRC=local -t astra .
 #
-# REQUIRES BuildKit (default in Docker >= 23.0). If your build fails with
+# REQUIRES BuildKit / buildx (default in Docker >= 23.0; otherwise install
+# the docker-buildx-plugin package). If your build fails with
 # "the --mount option requires BuildKit" or shows "Step X/Y" output,
 # enable BuildKit:
 #   DOCKER_BUILDKIT=1 docker build ...

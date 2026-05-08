@@ -1,33 +1,21 @@
 This repo contains the scripts, example traces, configs required to run astra-sim experiments.
 
-# Build docker container
-Run this command to build a docker container with astra-sim and its dependencies installed.
+# Prerequisites
+Install Docker and the buildx plugin. On Debian/Ubuntu:
 ```bash
-docker build -t astra .
+sudo apt install docker.io docker-buildx-plugin
 ```
 
-The `Dockerfile` requires [BuildKit](https://docs.docker.com/build/buildkit/), which is the default builder in Docker 23.0 and newer. If your build fails with `the --mount option requires BuildKit` or you see `Step X/Y` step output, enable BuildKit:
+# Build docker container
+Build with the upstream astra-sim source (default):
 ```bash
-DOCKER_BUILDKIT=1 docker build -t astra .
-# or
 docker buildx build -t astra .
 ```
 
-## Choosing the astra-sim source
-
-The `Dockerfile` accepts an `ASTRA_SRC` build arg that controls where `astra-sim-hybrid-parallelism` comes from:
-
-- `ASTRA_SRC=git` (default): clone the upstream repo from GitHub and check out the `multitenant` branch. Use this for clean, reproducible builds. The local `./astra-sim-hybrid-parallelism` folder is not required and is ignored if present.
-
-  ```bash
-  docker build -t astra .
-  ```
-
-- `ASTRA_SRC=local`: copy the working copy under `./astra-sim-hybrid-parallelism` from the build context, including any uncommitted changes. Use this when iterating on simulator code locally. The directory must exist next to the `Dockerfile` — the build aborts with a clear error otherwise. Submodules are still init'd inside the image, so a forgotten local `git submodule update --init --recursive` won't silently produce a broken image.
-
-  ```bash
-  docker build --build-arg ASTRA_SRC=local -t astra .
-  ```
+Or build with the local `./astra-sim-hybrid-parallelism` working copy (must exist next to the `Dockerfile`):
+```bash
+docker buildx build --build-arg ASTRA_SRC=local -t astra .
+```
 
 # Run an example experiment
 Next, you can start the docker container and run an experiment.
