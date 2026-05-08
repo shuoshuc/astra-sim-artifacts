@@ -1,0 +1,4 @@
+Build-time sentinel for the Dockerfile. Ensures the COPY pattern
+"astra-sim-hybrid-parallelism*" always matches at least one entry, so
+the build does not fail with the legacy Docker builder when the optional
+local astra-sim-hybrid-parallelism/ directory is absent. Do not delete.

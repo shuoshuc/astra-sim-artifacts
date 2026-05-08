@@ -1,48 +1,52 @@
 # Source of astra-sim-hybrid-parallelism:
-#   ASTRA_SRC=git    (default) clone from GitHub at build time.
+#   ASTRA_SRC=git    (default) clone from GitHub at build time. The local
+#                    ./astra-sim-hybrid-parallelism folder is not required
+#                    and is ignored if present.
 #   ASTRA_SRC=local  copy the working copy under ./astra-sim-hybrid-parallelism
 #                    (including uncommitted changes) from the build context.
 # Build with:  docker build --build-arg ASTRA_SRC=local -t astra .
+#
+# Single-stage source acquisition (works on both BuildKit and the legacy
+# builder). The placeholder file + wildcard pattern guarantees the COPY
+# always succeeds even when the optional local directory is absent.
+
+
+### ============= Source Acquisition ======================
+FROM ubuntu:22.04 AS astra-source
 ARG ASTRA_SRC=git
-
-
-### ============= Source Fetch Stages =====================
-## Fetch from upstream GitHub.
-FROM ubuntu:22.04 AS source-git
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt -y update && apt -y install -y git
-RUN git clone https://github.com/EricDinging/astra-sim-hybrid-parallelism.git /astra-sim-src
-WORKDIR /astra-sim-src
-RUN git checkout multitenant
-RUN git submodule update --init --recursive
-
-## Use the local working copy from the build context. Submodules are
-## still init/updated to the recorded SHA so a missing submodule on the
-## host does not silently produce a broken image.
-FROM ubuntu:22.04 AS source-local
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt -y update && apt -y install -y git
-# Bind-mount the build context (read-only) so we can detect a missing
-# ./astra-sim-hybrid-parallelism and emit a clearer error than a bare
-# COPY failure. cp -a preserves the embedded .git so submodules can init.
-RUN --mount=type=bind,target=/host,ro=true \
-    if [ ! -d /host/astra-sim-hybrid-parallelism ]; then \
-        echo "" && \
-        echo "ERROR: ASTRA_SRC=local was specified but ./astra-sim-hybrid-parallelism" && \
-        echo "       is not present in the build context." && \
-        echo "" && \
-        echo "       Either clone it next to this Dockerfile:" && \
-        echo "         git clone -b multitenant https://github.com/EricDinging/astra-sim-hybrid-parallelism.git" && \
-        echo "       Or rebuild with --build-arg ASTRA_SRC=git to fetch from upstream." && \
-        echo "" && \
+# astra-sim-hybrid-parallelism.placeholder is a committed sentinel; the
+# wildcard expands to {placeholder, directory-if-present}. When the local
+# directory exists, COPY flattens its contents into /astra-staging/
+# (subdirectories preserved). When absent, only the placeholder lands
+# there and we detect it via the missing CMakeLists.txt marker.
+COPY astra-sim-hybrid-parallelism.placeholder astra-sim-hybrid-parallelism* /astra-staging/
+RUN set -e; \
+    if [ "${ASTRA_SRC}" = "local" ]; then \
+        if [ ! -f /astra-staging/CMakeLists.txt ]; then \
+            echo "" && \
+            echo "ERROR: ASTRA_SRC=local was specified but ./astra-sim-hybrid-parallelism" && \
+            echo "       is not present in the build context." && \
+            echo "" && \
+            echo "       Either clone it next to this Dockerfile:" && \
+            echo "         git clone -b multitenant https://github.com/EricDinging/astra-sim-hybrid-parallelism.git" && \
+            echo "       Or rebuild with --build-arg ASTRA_SRC=git to fetch from upstream." && \
+            echo "" && \
+            exit 1; \
+        fi; \
+        rm /astra-staging/astra-sim-hybrid-parallelism.placeholder; \
+        mv /astra-staging /astra-sim-src; \
+    elif [ "${ASTRA_SRC}" = "git" ]; then \
+        rm -rf /astra-staging; \
+        git clone https://github.com/EricDinging/astra-sim-hybrid-parallelism.git /astra-sim-src; \
+        cd /astra-sim-src && git checkout multitenant; \
+    else \
+        echo "ERROR: ASTRA_SRC must be 'git' or 'local', got '${ASTRA_SRC}'"; \
         exit 1; \
-    fi && \
-    cp -a /host/astra-sim-hybrid-parallelism /astra-sim-src
+    fi
 WORKDIR /astra-sim-src
 RUN git submodule update --init --recursive
-
-## Resolve which source stage to use based on ASTRA_SRC.
-FROM source-${ASTRA_SRC} AS astra-source
 ### ======================================================
 
 
