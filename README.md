@@ -6,6 +6,13 @@ Run this command to build a docker container with astra-sim and its dependencies
 docker build -t astra .
 ```
 
+The `Dockerfile` requires [BuildKit](https://docs.docker.com/build/buildkit/), which is the default builder in Docker 23.0 and newer. If your build fails with `the --mount option requires BuildKit` or you see `Step X/Y` step output, enable BuildKit:
+```bash
+DOCKER_BUILDKIT=1 docker build -t astra .
+# or
+docker buildx build -t astra .
+```
+
 ## Choosing the astra-sim source
 
 The `Dockerfile` accepts an `ASTRA_SRC` build arg that controls where `astra-sim-hybrid-parallelism` comes from:
