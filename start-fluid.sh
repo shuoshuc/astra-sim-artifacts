@@ -84,4 +84,4 @@ sudo docker run --rm --ipc=host --ulimit nofile=65536:65536 \
     -v "${CONFIGS_HOST}":/app/configs:ro \
     -v "${INPUT_DIR}":/app/inputs:ro \
     -v "${OUTPUT_DIR}":/app/output \
-    astra /bin/bash -c "/app/examples/fluid-model/run.sh ${JOB_SHAPE}"
+    astra /bin/bash /app/examples/fluid-model/run.sh "${JOB_SHAPE}"
