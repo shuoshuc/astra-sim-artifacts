@@ -144,11 +144,10 @@ first_nonzero() {
         $1 == "END" { exit }              # stop at terminator
         {
             for (i = 1; i <= NF; i++) {
-                if ($i + 0 != 0) { print $i; exit }
+                if ($i + 0 != 0) { print $i; found = 1; exit }
             }
         }
         END { if (!found) print "0" }
-        { found = 1 }
     ' "${file}"
 }
 BW_SCALAR=$(first_nonzero "${BW_FILE}")
