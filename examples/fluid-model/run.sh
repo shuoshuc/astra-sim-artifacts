@@ -12,46 +12,67 @@ TOOLS_PATH=${BASE_DIR}/tools
 TRACE_PATH=${SCRIPT_DIR}/trace
 INPUT_PATH=${SCRIPT_DIR}/inputs
 
-# Fluid-model scenario: J0 alone on a 2x2x1 cluster. The X-dim contention
-# from J1 (in the original 4x2 torus) is folded into asymmetric link
-# parameters: X-links have halved BW (25 GB/s) and doubled latency (1000 ns)
-# vs Y-links (50 GB/s, 500 ns). Schedule files are committed under inputs/.
-TORUS_X_SIZE=2
-TORUS_Y_SIZE=2
-TORUS_Z_SIZE=1
-MAIN_JOBS="2x2x1"
-BG_JOBS="1x1x1"
-DUMMY=false
-NCORE=$(( $(nproc) - 2 ))
-if [ "${NCORE}" -lt 1 ]; then NCORE=1; fi
+# Single job that fills the entire cluster. Job shape == torus shape ==
+# DP x TP x PP. Per-dim BW/latency model asymmetric link parameters (e.g.,
+# X-links contended by a notional other tenant -> halved BW, doubled latency).
+JOB_SHAPE=${1:-"2x2x1"}
+BW_PER_DIM=${2:-"25,50,50"}    # GB/s, X,Y,Z
+LT_PER_DIM=${3:-"1000,500,500"} # ns,  X,Y,Z
 
-# [Step 1] Prepare jobspec with the single main job (no background jobs; cluster is fully filled).
-python ${TOOLS_PATH}/create_jobspec.py -D "${TORUS_X_SIZE}x${TORUS_Y_SIZE}x${TORUS_Z_SIZE}" \
-    -J "${MAIN_JOBS}" -o "${INPUT_PATH}/jobspec.txt" -b "${BG_JOBS}"
+IFS='x' read -r TORUS_X_SIZE TORUS_Y_SIZE TORUS_Z_SIZE <<< "${JOB_SHAPE}"
+NPUS=$((TORUS_X_SIZE * TORUS_Y_SIZE * TORUS_Z_SIZE))
 
-# [Step 2] Generate traces using STG.
+mkdir -p "${INPUT_PATH}" "${TRACE_PATH}"
+
+# [Step 1] Emit a one-line jobspec for the single main job (no create_jobspec.py).
+echo "J0,M,${TORUS_X_SIZE},${TORUS_Y_SIZE},${TORUS_Z_SIZE}" > "${INPUT_PATH}/jobspec.txt"
+
+# [Step 2] Generate the trace with STG (single invocation, no parallel).
+mkdir -p "${TRACE_PATH}/J0"
 cd ${STG_DIR}
-export STG_DIR TRACE_PATH DUMMY
-parallel --jobs ${NCORE} --colsep ',' '
-    if [[ ${DUMMY} == true && "{2}" == "B" ]]; then
-        echo "{1} {2} should use tracegen_manual"
-    else
-        mkdir -p "${TRACE_PATH}/{1}"
-        python "${STG_DIR}/main.py" --output_dir "${TRACE_PATH}/{1}" --output_name "{1}" \
-            --model_type "dense" --dp "{3}" --tp "{4}" --pp "{5}" \
-            --dmodel 32768 --dff 114688 --batch 128 --seq 2048 --dvocal 128000 \
-            --head 128 --kvhead 16 --num_stacks 96 \
-            --weight_sharded 0 --chakra_schema_version "v0.0.4"
-    fi
-' :::: "${INPUT_PATH}/jobspec.txt"
+python "${STG_DIR}/main.py" --output_dir "${TRACE_PATH}/J0" --output_name "J0" \
+    --model_type "dense" \
+    --dp "${TORUS_X_SIZE}" --tp "${TORUS_Y_SIZE}" --pp "${TORUS_Z_SIZE}" \
+    --dmodel 32768 --dff 114688 --batch 128 --seq 2048 --dvocal 128000 \
+    --head 128 --kvhead 16 --num_stacks 96 \
+    --weight_sharded 0 --chakra_schema_version "v0.0.4"
 
-# [Step 3] Merge traces using the committed placement.json (no place.py — placement is fixed).
+# [Step 3] Emit identity placement (logical == physical; no place.py).
+python -c "
+import json
+N = ${TORUS_X_SIZE} * ${TORUS_Y_SIZE} * ${TORUS_Z_SIZE}
+with open('${INPUT_PATH}/placement.json', 'w') as f:
+    json.dump({f'J0-{i}': i for i in range(N)}, f, indent=4)
+    f.write('\n')
+"
+
+# [Step 4] Merge traces + generate BW/LT schedules + patch network.yml.
 cd ${SCRIPT_DIR}
 mkdir -p ${TRACE_PATH}/merged
-TRACES=$(cut -d, -f1 "${INPUT_PATH}/jobspec.txt" | paste -sd, -)
-python ${TOOLS_PATH}/merge_trace.py -i ${TRACE_PATH} --traces ${TRACES} -o ${TRACE_PATH}/merged/ -p ${INPUT_PATH}/placement.json
+python ${TOOLS_PATH}/merge_trace.py -i ${TRACE_PATH} --traces "J0" \
+    -o ${TRACE_PATH}/merged/ -p ${INPUT_PATH}/placement.json
 
-# [Step 4] Run ASTRA-sim with the committed asymmetric BW/latency schedules.
+python ${TOOLS_PATH}/gen_schedule.py \
+    -x ${TORUS_X_SIZE} -y ${TORUS_Y_SIZE} -z ${TORUS_Z_SIZE} \
+    -bw "${BW_PER_DIM}" -lt "${LT_PER_DIM}" \
+    --bw-output ${INPUT_PATH}/bw_schedule.txt \
+    --latency-output ${INPUT_PATH}/latency_schedule.txt
+
+# network.yml's bandwidth/latency are scalar fallbacks; the matrix files
+# above override them. Patch the YAML with the first-dim values just to
+# keep the file internally consistent.
+BW_FIRST=$(echo "${BW_PER_DIM}" | cut -d, -f1)
+LT_FIRST=$(echo "${LT_PER_DIM}" | cut -d, -f1)
+sed -i "s/npus_count: \[ .* \]/npus_count: [ ${NPUS} ]/" ${INPUT_PATH}/network.yml
+sed -i "s/bandwidth: \[ .* \]/bandwidth: [ ${BW_FIRST} ]/" ${INPUT_PATH}/network.yml
+sed -i "s/latency: \[ .* \]/latency: [ ${LT_FIRST} ]/" ${INPUT_PATH}/network.yml
+
+# [Step 5] Run ASTRA-sim, then extract JCT.
+# Raise the open-file limit: each Sys keeps trace.{rank}.et open for the
+# run's lifetime; the default soft limit of 1024 is insufficient at scale.
+# Note: the simulator writes log/jct.log itself (trace-level only) via a
+# dedicated spdlog sink rooted at the CWD's "log/" folder; do NOT tee
+# stdout to that path or extract_jct.py will choke on info-level lines.
 ulimit -n 65536
 (
 ${ASTRA_SIM} \
@@ -65,5 +86,5 @@ ${ASTRA_SIM} \
     --npus-per-dim=${TORUS_X_SIZE},${TORUS_Y_SIZE},${TORUS_Z_SIZE}
 )
 
-# [Step 5] Extract JCT into a csv file.
-python ${TOOLS_PATH}/extract_jct.py -p ${INPUT_PATH}/placement.json -l ${SCRIPT_DIR}/log/jct.log -o ${SCRIPT_DIR}/jct.csv
+python ${TOOLS_PATH}/extract_jct.py -p ${INPUT_PATH}/placement.json \
+    -l ${SCRIPT_DIR}/log/jct.log -o ${SCRIPT_DIR}/jct.csv
