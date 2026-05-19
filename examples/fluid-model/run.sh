@@ -74,7 +74,7 @@ validate_schedule() {
     fi
     # Body: exactly N rows of N numeric fields each.
     local total
-    total=$(wc -l < "${file}")
+    total=$(awk 'END {print NR}' "${file}")
     local expected_total=$((N + 2))   # tag + N rows + END
     if [[ "${total}" -ne "${expected_total}" ]]; then
         echo "run.sh: ${file}: expected ${expected_total} lines (1 tag + ${N} rows + END) for JOB_SHAPE ${JOB_SHAPE}, found ${total}" >&2

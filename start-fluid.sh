@@ -50,6 +50,11 @@ if [[ ! "${JOB_SHAPE}" =~ ^[0-9]+x[0-9]+x[0-9]+$ ]]; then
     echo "start-fluid.sh: JOB_SHAPE '${JOB_SHAPE}' is not in X x Y x Z form (e.g. 2x2x1)" >&2
     exit 1
 fi
+IFS='x' read -r _X _Y _Z <<< "${JOB_SHAPE}"
+if [[ ${_X} -lt 1 || ${_Y} -lt 1 || ${_Z} -lt 1 ]]; then
+    echo "start-fluid.sh: JOB_SHAPE dims must all be >= 1 (got ${JOB_SHAPE})" >&2
+    exit 1
+fi
 
 # --- Resolve and validate paths --------------------------------------------
 
