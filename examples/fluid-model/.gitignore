@@ -1,7 +1,0 @@
-inputs/jobspec.txt
-inputs/placement.json
-inputs/bw_schedule.txt
-inputs/latency_schedule.txt
-trace/
-log/
-jct.csv
