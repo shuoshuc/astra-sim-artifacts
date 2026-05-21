@@ -1,4 +1,4 @@
 topology: [ FullyConnected ]
 npus_count: [ 4 ]
-bandwidth: [ 50 ]  # GB/s (fallback; --bw-schedule overrides per-link)
-latency: [ 500 ]  # ns (fallback; --latency-schedule overrides per-link)
+bandwidth: [ 25 ]  # GB/s (fallback; --bw-schedule overrides per-link)
+latency: [ 1000 ]  # ns (fallback; --latency-schedule overrides per-link)
