@@ -10,12 +10,16 @@ CONFIGS_HOST="${REPO_DIR}/examples/fluid-model/inputs"
 
 usage() {
     cat <<EOF
-Usage: $0 <JOB_SHAPE> --input-dir DIR --output-dir DIR
+Usage: $0 <JOB_SHAPE> --input-dir DIR --output-dir DIR [--mode {mode1|mode2}]
 
 Required:
   JOB_SHAPE         torus shape XxYxZ (e.g. 2x2x1)
   --input-dir DIR   host dir containing bw_schedule.txt and latency_schedule.txt
   --output-dir DIR  host dir that will receive jct.csv (created if missing)
+
+Optional:
+  --mode MODE       mode1 (STG-generated traces) or mode2 (manual collective-
+                    only traces via tracegen_manual.py). Default: mode2.
 EOF
     exit 2
 }
@@ -27,10 +31,17 @@ JOB_SHAPE="$1"; shift
 
 INPUT_DIR=""
 OUTPUT_DIR=""
+MODE="mode2"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --input-dir)  INPUT_DIR="$2"; shift 2 ;;
         --output-dir) OUTPUT_DIR="$2"; shift 2 ;;
+        --mode)
+            if [[ $# -lt 2 ]]; then
+                echo "start-fluid.sh: --mode requires a value" >&2
+                usage
+            fi
+            MODE="$2"; shift 2 ;;
         -h|--help)    usage ;;
         *)
             echo "start-fluid.sh: unknown argument: $1" >&2
@@ -41,6 +52,11 @@ done
 
 if [[ -z "${INPUT_DIR}" || -z "${OUTPUT_DIR}" ]]; then
     echo "start-fluid.sh: --input-dir and --output-dir are both required" >&2
+    usage
+fi
+
+if [[ "${MODE}" != "mode1" && "${MODE}" != "mode2" ]]; then
+    echo "start-fluid.sh: --mode must be 'mode1' or 'mode2' (got '${MODE}')" >&2
     usage
 fi
 
@@ -89,4 +105,4 @@ sudo docker run --rm --ipc=host --ulimit nofile=65536:65536 \
     -v "${CONFIGS_HOST}":/app/configs:ro \
     -v "${INPUT_DIR}":/app/inputs:ro \
     -v "${OUTPUT_DIR}":/app/output \
-    astra /bin/bash /app/examples/fluid-model/run.sh "${JOB_SHAPE}"
+    rfold-astra /bin/bash /app/examples/fluid-model/run.sh "${JOB_SHAPE}" --mode "${MODE}"

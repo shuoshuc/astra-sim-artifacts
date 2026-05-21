@@ -7,8 +7,10 @@ set -e
 # /tmp/fluid-model/ and disappear on container exit.
 
 usage() {
-    echo "Usage: $0 <JOB_SHAPE>"
+    echo "Usage: $0 <JOB_SHAPE> --mode {mode1|mode2}"
     echo "  JOB_SHAPE: torus shape as XxYxZ (e.g. 2x2x1)"
+    echo "  --mode mode1   STG-generated traces (original behavior)"
+    echo "  --mode mode2   tracegen_manual.py collective-only traces"
     echo ""
     echo "Mounts (set by the wrapper script):"
     echo "  /app/configs  static inputs (sys.json, RemoteMemory.json, network.yml)"
@@ -17,11 +19,40 @@ usage() {
     exit 2
 }
 
-if [[ $# -ne 1 ]]; then
+JOB_SHAPE=""
+MODE=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --mode)
+            if [[ $# -lt 2 ]]; then
+                echo "run.sh: --mode requires a value" >&2
+                usage
+            fi
+            MODE="$2"; shift 2 ;;
+        -h|--help)
+            usage ;;
+        --*)
+            echo "run.sh: unknown flag: $1" >&2; usage ;;
+        *)
+            if [[ -z "${JOB_SHAPE}" ]]; then
+                JOB_SHAPE="$1"; shift
+            else
+                echo "run.sh: unexpected positional arg: $1" >&2; usage
+            fi
+            ;;
+    esac
+done
+
+if [[ -z "${JOB_SHAPE}" ]]; then
+    echo "run.sh: JOB_SHAPE is required" >&2
     usage
 fi
 
-JOB_SHAPE="$1"
+if [[ "${MODE}" != "mode1" && "${MODE}" != "mode2" ]]; then
+    echo "run.sh: --mode must be 'mode1' or 'mode2' (got '${MODE}')" >&2
+    usage
+fi
 
 # In-container paths. Not user-overridable; the wrapper owns mount layout.
 BASE_DIR=/app
@@ -35,6 +66,13 @@ WORK_DIR=/tmp/fluid-model
 
 BW_FILE=${INPUTS_DIR}/bw_schedule.txt
 LT_FILE=${INPUTS_DIR}/latency_schedule.txt
+
+# Per-dim All-Reduce payload sizes in MB. Indices map to (DP, TP, PP)
+# = (X, Y, Z) of JOB_SHAPE. Size-1 dims contribute no collective.
+# Mode2 only; ignored in mode1.
+COLL_SIZE_DP_MB=1
+COLL_SIZE_TP_MB=1
+COLL_SIZE_PP_MB=1
 
 # --- Parse JOB_SHAPE -------------------------------------------------------
 
@@ -104,18 +142,37 @@ rm -rf "${WORK_DIR}"
 mkdir -p "${WORK_DIR}/trace/J0" "${WORK_DIR}/log"
 
 # --- [Step 2] Emit jobspec (single line, single job) -----------------------
+# Label is 'M' in mode1 (STG handles main jobs; jobspec is written but
+# unread). Label is 'B' in mode2 so tracegen_manual.py's M-skip doesn't
+# drop the job.
 
-echo "J0,M,${X},${Y},${Z}" > "${WORK_DIR}/jobspec.txt"
+if [[ "${MODE}" == "mode1" ]]; then
+    JOB_LABEL="M"
+else
+    JOB_LABEL="B"
+fi
+echo "J0,${JOB_LABEL},${X},${Y},${Z}" > "${WORK_DIR}/jobspec.txt"
 
-# --- [Step 3] Generate trace via STG ---------------------------------------
+# --- [Step 3] Generate trace --- mode1 uses STG; mode2 uses tracegen_manual.
 
-cd "${STG_DIR}"
-python "${STG_DIR}/main.py" --output_dir "${WORK_DIR}/trace/J0" --output_name "J0" \
-    --model_type "dense" \
-    --dp "${X}" --tp "${Y}" --pp "${Z}" \
-    --dmodel 32768 --dff 114688 --batch 128 --seq 2048 --dvocal 128000 \
-    --head 128 --kvhead 16 --num_stacks 96 \
-    --weight_sharded 0 --chakra_schema_version "v0.0.4"
+if [[ "${MODE}" == "mode1" ]]; then
+    cd "${STG_DIR}"
+    python "${STG_DIR}/main.py" --output_dir "${WORK_DIR}/trace/J0" --output_name "J0" \
+        --model_type "dense" \
+        --dp "${X}" --tp "${Y}" --pp "${Z}" \
+        --dmodel 32768 --dff 114688 --batch 128 --seq 2048 --dvocal 128000 \
+        --head 128 --kvhead 16 --num_stacks 96 \
+        --weight_sharded 0 --chakra_schema_version "v0.0.4"
+else
+    # mode2: emits one All-Reduce per non-singleton dim of (X,Y,Z) =
+    # (DP,TP,PP), chained through Compute nodes. Output paths
+    # ${WORK_DIR}/trace/J0/J0.{rank}.et and ${WORK_DIR}/trace/J0/J0.json
+    # are the same paths the simulator already expects.
+    python "${TOOLS_PATH}/tracegen_manual.py" \
+        -J "${WORK_DIR}/jobspec.txt" \
+        -o "${WORK_DIR}/trace" \
+        --coll_size_mb "${COLL_SIZE_DP_MB},${COLL_SIZE_TP_MB},${COLL_SIZE_PP_MB}"
+fi
 
 # --- [Step 4] Identity placement -------------------------------------------
 
